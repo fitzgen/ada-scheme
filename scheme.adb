@@ -129,6 +129,7 @@ procedure Scheme is
 
             if Element(Str, I) = '-' then
                Sign := -1;
+               I := I + 1;
             end if;
 
             while Length(Str) >= I and then Is_Digit(Element(Str, I)) loop
