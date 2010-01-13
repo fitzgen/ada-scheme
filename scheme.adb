@@ -23,10 +23,11 @@ procedure Scheme is
 
    -- MODEL ---------------------------------------------------------------
 
-   type Object_Type is (Int);
+   type Object_Type is (Int, Bool);
 
    type Object_Data is record
       Int : Integer;
+      Bool : Boolean;
    end record;
 
    type Object is record
@@ -43,6 +44,29 @@ procedure Scheme is
       return Obj;
    end;
 
+   True_Singleton : Access_Object;
+   False_Singleton : Access_Object;
+
+   function Is_Boolean (Obj : Access_Object) return Boolean is
+   begin
+      return Obj.all.O_Type = Bool;
+   end;
+
+   function Is_False (Obj : Access_Object) return Boolean is
+   begin
+      return Obj = False_Singleton;
+   end;
+
+   function Is_True (Obj : Access_Object) return Boolean is
+   begin
+      return Obj = True_Singleton;
+   end;
+
+   function Is_Integer (Obj : Access_Object) return Boolean is
+   begin
+      return Obj.all.O_Type = Int;
+   end;
+
    function Make_Integer (Value : Integer) return Access_Object is
       Obj : Access_Object;
    begin
@@ -50,6 +74,17 @@ procedure Scheme is
       Obj.all.O_Type := Int;
       Obj.all.Data.Int := Value;
       return Obj;
+   end;
+
+   procedure Init is
+   begin
+      False_Singleton := Allowc_Object;
+      False_Singleton.all.O_Type := Bool;
+      False_Singleton.all.Data.Bool := False;
+
+      True_Singleton := Allowc_Object;
+      True_Singleton.all.O_Type := Bool;
+      True_Singleton.all.Data.Bool := True;
    end;
 
    -- READ ----------------------------------------------------------------
@@ -76,9 +111,23 @@ procedure Scheme is
 
       while I <= Length(Str) loop
          if Is_Space(Element(Str, I)) then
-            Stderr("Inside is_space branch of while loops logic.");
+            -- Continue
             I := I + 1;
+
+         elsif Element(Str, I) = '#' then
+            -- Read a boolean
+            I := I + 1;
+            case Element(Str, I) is
+               when 't' => return True_Singleton;
+               when 'f' => return False_Singleton;
+               when others =>
+                  Stderr("Unknown boolean literal.");
+                  raise Constraint_Error;
+            end case;
+
          elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
+            -- Read an integer
+
             if Element(Str, I) = '-' then
                Sign := -1;
             elsif I /= 1 then
@@ -128,6 +177,12 @@ procedure Scheme is
       case Obj.all.O_Type is
          when Int =>
             Put(Obj.all.Data.Int, Width => 0);
+         when Bool =>
+            if Obj.all.Data.Bool = True then
+               Put("#t");
+            else
+               Put("#f");
+            end if;
          when others =>
             Stderr("Cannot write unknown data type.");
             raise Constraint_Error;
@@ -135,6 +190,8 @@ procedure Scheme is
    end;
 
 begin
+
+   Init;
 
    -- REPL ----------------------------------------------------------------
 
@@ -151,4 +208,4 @@ end;
 
 -- MUSIC ------------------------------------------------------------------
 
--- Lifer's Group, Grand Puba
+-- Lifer's Group, Grand Puba, Nightmares On Wax
