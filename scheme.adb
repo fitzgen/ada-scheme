@@ -18,7 +18,6 @@ procedure Scheme is
       Put_Line(Str);
    end;
 
-
    package U_Str renames Ada.Strings.Unbounded;
 
    -- MODEL ---------------------------------------------------------------
@@ -130,8 +129,6 @@ procedure Scheme is
 
             if Element(Str, I) = '-' then
                Sign := -1;
-            elsif I /= 1 then
-               I := I - 1;
             end if;
 
             while Length(Str) >= I and then Is_Digit(Element(Str, I)) loop
