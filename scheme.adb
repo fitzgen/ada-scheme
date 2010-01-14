@@ -22,11 +22,12 @@ procedure Scheme is
 
    -- MODEL ---------------------------------------------------------------
 
-   type Object_Type is (Int, Bool);
+   type Object_Type is (Int, Bool, Char);
 
    type Object_Data is record
       Int : Integer;
       Bool : Boolean;
+      Char : Character;
    end record;
 
    type Object is record
@@ -66,12 +67,26 @@ procedure Scheme is
       return Obj.all.O_Type = Int;
    end;
 
+   function Is_Character (Obj : Access_Object) return Boolean is
+   begin
+      return Obj.all.O_Type = Char;
+   end;
+
    function Make_Integer (Value : Integer) return Access_Object is
       Obj : Access_Object;
    begin
       Obj := Allowc_Object;
       Obj.all.O_Type := Int;
       Obj.all.Data.Int := Value;
+      return Obj;
+   end;
+
+   function Make_Char (C : Character) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Allowc_Object;
+      Obj.all.O_Type := Char;
+      Obj.all.Data.Char := C;
       return Obj;
    end;
 
@@ -114,15 +129,21 @@ procedure Scheme is
             I := I + 1;
 
          elsif Element(Str, I) = '#' then
-            -- Read a boolean
             I := I + 1;
-            case Element(Str, I) is
-               when 't' => return True_Singleton;
-               when 'f' => return False_Singleton;
-               when others =>
-                  Stderr("Unknown boolean literal.");
-                  raise Constraint_Error;
-            end case;
+            if Element(Str, I) = '\' then
+               -- Read a character
+               I := I + 1;
+               return Make_Char(Element(Str, I));
+            else
+               -- Read a boolean
+               case Element(Str, I) is
+                  when 't' => return True_Singleton;
+                  when 'f' => return False_Singleton;
+                  when others =>
+                     Stderr("Unknown boolean literal.");
+                     raise Constraint_Error;
+               end case;
+            end if;
 
          elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
             -- Read an integer
@@ -181,6 +202,21 @@ procedure Scheme is
             else
                Put("#f");
             end if;
+         when Char =>
+            declare
+               Str : U_Str.Unbounded_String;
+            begin
+               Append(Str, "#\ ");
+               case Obj.all.Data.Char is
+                  when ' ' =>
+                     Insert(Str, 3, "space");
+                  when Character'Val(10) =>
+                     Insert(Str, 3, "newline");
+                  when others =>
+                     Replace_Element(Str, 3, Obj.all.Data.Char);
+               end case;
+               Put(Str);
+            end;
          when others =>
             Stderr("Cannot write unknown data type.");
             raise Constraint_Error;
