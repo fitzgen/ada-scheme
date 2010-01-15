@@ -133,7 +133,31 @@ procedure Scheme is
             if Element(Str, I) = '\' then
                -- Read a character
                I := I + 1;
-               return Make_Char(Element(Str, I));
+
+               -- Check for "#\space" and "#\newline"
+               begin
+                  if Element(Str, I) = 's' then
+                     if Slice(Str, I, I + 4) = "space" then
+                        return Make_Char(' ');
+                     end if;
+                  elsif Element(Str, I) = 'n' then
+                     if Slice(Str, I, I + 6) = "newline" then
+                        return Make_Char(Character'Val(10));
+                     end if;
+                  end if;
+               exception
+                  when Ada.Strings.Index_Error =>
+                     null;
+               end;
+
+               -- If the index fails, that means a newline was entered since Ada
+               -- won't keep the last \n.
+               begin
+                  return Make_Char(Element(Str, I));
+               exception
+                  when Ada.Strings.Index_Error =>
+                     return Make_Char(Character'Val(10));
+               end;
             else
                -- Read a boolean
                case Element(Str, I) is
