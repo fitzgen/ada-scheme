@@ -22,12 +22,13 @@ procedure Scheme is
 
    -- MODEL ---------------------------------------------------------------
 
-   type Object_Type is (Int, Bool, Char);
+   type Object_Type is (Int, Bool, Char, Strng);
 
    type Object_Data is record
       Int : Integer;
       Bool : Boolean;
       Char : Character;
+      Strng : U_Str.Unbounded_String;
    end record;
 
    type Object is record
@@ -72,6 +73,11 @@ procedure Scheme is
       return Obj.all.O_Type = Char;
    end;
 
+   function Is_String (Obj : Access_Object) return Boolean is
+   begin
+      return Obj.all.O_Type = Strng;
+   end;
+
    function Make_Integer (Value : Integer) return Access_Object is
       Obj : Access_Object;
    begin
@@ -87,6 +93,15 @@ procedure Scheme is
       Obj := Allowc_Object;
       Obj.all.O_Type := Char;
       Obj.all.Data.Char := C;
+      return Obj;
+   end;
+
+   function Make_String (Str : U_Str.Unbounded_String) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Allowc_Object;
+      Obj.all.O_Type := Strng;
+      Obj.all.Data.Strng := Str;
       return Obj;
    end;
 
@@ -106,7 +121,7 @@ procedure Scheme is
    function Read return Access_Object is
 
       Str : U_Str.Unbounded_String;
-      I, Sign : Integer := 1;
+      I, J, Sign : Integer := 1;
       Num : Integer := 0;
 
       function Is_Delimiter (C : Character) return Boolean is
@@ -127,6 +142,21 @@ procedure Scheme is
          if Is_Space(Element(Str, I)) then
             -- Continue
             I := I + 1;
+
+         elsif Element(Str, I) = '"' then
+            -- Read a String
+            I := I + 1;
+            J := I;
+            begin
+               while Element(Str, I) /= '"' loop
+                  I := I + 1;
+               end loop;
+               return Make_String(To_Unbounded_String(Slice(Str, J, I - 1)));
+            exception
+               when Ada.Strings.Index_Error =>
+                  Stderr("Malformed string, missing endquote");
+                  raise Constraint_Error;
+            end;
 
          elsif Element(Str, I) = '#' then
             I := I + 1;
@@ -241,6 +271,16 @@ procedure Scheme is
                end case;
                Put(Str);
             end;
+         when Strng =>
+            Put('"');
+            for I in 1 .. Length(Obj.all.Data.Strng) loop
+               if Element(Obj.all.Data.Strng, I) /= Character'Val(10) then
+                  Put(Element(Obj.all.Data.Strng, I));
+               else
+                  Put("\n");
+               end if;
+            end loop;
+            Put('"');
          when others =>
             Stderr("Cannot write unknown data type.");
             raise Constraint_Error;
