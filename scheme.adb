@@ -121,7 +121,7 @@ procedure Scheme is
    function Read return Access_Object is
 
       Str : U_Str.Unbounded_String;
-      I, J, Sign : Integer := 1;
+      I, Sign : Integer := 1;
       Num : Integer := 0;
 
       function Is_Delimiter (C : Character) return Boolean is
@@ -146,16 +146,40 @@ procedure Scheme is
          elsif Element(Str, I) = '"' then
             -- Read a String
             I := I + 1;
-            J := I;
+            declare
+               Obj_Str : U_Str.Unbounded_String;
             begin
-               while Element(Str, I) /= '"' loop
-                  I := I + 1;
+               loop
+                  begin
+                     exit when Element(Str, I) = '"';
+
+                     if Element(Str, I) = '\' then
+                        I := I + 1;
+                        case Element(Str, I) is
+                           when 'n' =>
+                              Append(Obj_Str, Character'Val(10));
+                           when '"' =>
+                              Append(Obj_Str, '"');
+                           when '\' =>
+                              Append(Obj_Str, '\');
+                           when others =>
+                              Stderr("Unkown character escape.");
+                              raise Constraint_Error;
+                        end case;
+                     else
+                        Append(Obj_Str, Slice(Str, I, I));
+                     end if;
+                     I := I + 1;
+
+                  exception
+                     when Ada.Strings.Index_Error =>
+                        Append(Obj_Str, Character'Val(10));
+                        Str := Get_Line;
+                        I := 1;
+                  end;
                end loop;
-               return Make_String(To_Unbounded_String(Slice(Str, J, I - 1)));
-            exception
-               when Ada.Strings.Index_Error =>
-                  Stderr("Malformed string, missing endquote");
-                  raise Constraint_Error;
+
+               return Make_String(Obj_Str);
             end;
 
          elsif Element(Str, I) = '#' then
@@ -274,10 +298,15 @@ procedure Scheme is
          when Strng =>
             Put('"');
             for I in 1 .. Length(Obj.all.Data.Strng) loop
-               if Element(Obj.all.Data.Strng, I) /= Character'Val(10) then
-                  Put(Element(Obj.all.Data.Strng, I));
-               else
+               if Element(Obj.all.Data.Strng, I) = Character'Val(10) then
                   Put("\n");
+               elsif Element(Obj.all.Data.Strng, I) = '"' then
+                  Put('\');
+                  Put('"');
+               elsif Element(Obj.all.Data.Strng, I) = '\' then
+                  Put("\\");
+               else
+                  Put(Element(Obj.all.Data.Strng, I));
                end if;
             end loop;
             Put('"');
