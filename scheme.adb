@@ -22,7 +22,7 @@ procedure Scheme is
 
    -- MODEL ---------------------------------------------------------------
 
-   type Object_Type is (Int, Bool, Char, Strng);
+   type Object_Type is (Int, Bool, Char, Strng, Empty_List);
 
    type Object_Data is record
       Int : Integer;
@@ -47,6 +47,7 @@ procedure Scheme is
 
    True_Singleton : Access_Object;
    False_Singleton : Access_Object;
+   The_Empty_List : Access_Object;
 
    function Is_Boolean (Obj : Access_Object) return Boolean is
    begin
@@ -61,6 +62,11 @@ procedure Scheme is
    function Is_True (Obj : Access_Object) return Boolean is
    begin
       return Obj = True_Singleton;
+   end;
+
+   function Is_The_Empty_List (Obj : Access_Object) return Boolean is
+   begin
+      return Obj = The_Empty_List;
    end;
 
    function Is_Integer (Obj : Access_Object) return Boolean is
@@ -107,6 +113,9 @@ procedure Scheme is
 
    procedure Init is
    begin
+      The_Empty_List := Allowc_Object;
+      The_Empty_List.all.O_Type := Empty_List;
+
       False_Singleton := Allowc_Object;
       False_Singleton.all.O_Type := Bool;
       False_Singleton.all.Data.Bool := False;
@@ -181,6 +190,27 @@ procedure Scheme is
 
                return Make_String(Obj_Str);
             end;
+
+         -- Lists
+         elsif Element(Str, I) = '(' then
+            I := I + 1;
+            loop
+               begin
+                  if Element(Str, I) = ')' then
+                     -- Read the empty list
+                     return The_Empty_List;
+                  elsif Element(Str, I) = ' ' then
+                     I := I + 1;
+                  else
+                     Stderr("Only the empty list is implemented!");
+                     raise Constraint_Error;
+                  end if;
+               exception
+                  when Ada.Strings.Index_Error =>
+                     Str := Get_Line;
+                     I := 1;
+               end;
+            end loop;
 
          elsif Element(Str, I) = '#' then
             I := I + 1;
@@ -310,6 +340,8 @@ procedure Scheme is
                end if;
             end loop;
             Put('"');
+         when Empty_List =>
+            Put("()");
          when others =>
             Stderr("Cannot write unknown data type.");
             raise Constraint_Error;
