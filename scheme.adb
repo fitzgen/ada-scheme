@@ -144,6 +144,41 @@ procedure Scheme is
          return C = ' ';
       end;
 
+      procedure Read_String (Str : in out U_Str.Unbounded_String;
+                             Obj_Str : in out U_Str.Unbounded_String;
+                             I : in out Integer) is
+      begin
+         loop
+            begin
+               exit when Element(Str, I) = '"';
+
+               if Element(Str, I) = '\' then
+                  I := I + 1;
+                  case Element(Str, I) is
+                     when 'n' =>
+                        Append(Obj_Str, Character'Val(10));
+                     when '"' =>
+                        Append(Obj_Str, '"');
+                     when '\' =>
+                        Append(Obj_Str, '\');
+                     when others =>
+                        Stderr("Unkown character escape.");
+                        raise Constraint_Error;
+                  end case;
+               else
+                  Append(Obj_Str, Slice(Str, I, I));
+               end if;
+               I := I + 1;
+
+            exception
+               when Ada.Strings.Index_Error =>
+                  Append(Obj_Str, Character'Val(10));
+                  Str := Get_Line;
+                  I := 1;
+            end;
+         end loop;
+      end;
+
    begin
       Str := Get_Line;
 
@@ -158,36 +193,7 @@ procedure Scheme is
             declare
                Obj_Str : U_Str.Unbounded_String;
             begin
-               loop
-                  begin
-                     exit when Element(Str, I) = '"';
-
-                     if Element(Str, I) = '\' then
-                        I := I + 1;
-                        case Element(Str, I) is
-                           when 'n' =>
-                              Append(Obj_Str, Character'Val(10));
-                           when '"' =>
-                              Append(Obj_Str, '"');
-                           when '\' =>
-                              Append(Obj_Str, '\');
-                           when others =>
-                              Stderr("Unkown character escape.");
-                              raise Constraint_Error;
-                        end case;
-                     else
-                        Append(Obj_Str, Slice(Str, I, I));
-                     end if;
-                     I := I + 1;
-
-                  exception
-                     when Ada.Strings.Index_Error =>
-                        Append(Obj_Str, Character'Val(10));
-                        Str := Get_Line;
-                        I := 1;
-                  end;
-               end loop;
-
+               Read_String(Str, Obj_Str, I);
                return Make_String(Obj_Str);
             end;
 
