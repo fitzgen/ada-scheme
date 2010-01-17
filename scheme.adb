@@ -131,7 +131,6 @@ procedure Scheme is
 
       Str : U_Str.Unbounded_String;
       I, Sign : Integer := 1;
-      Num : Integer := 0;
 
       function Is_Delimiter (C : Character) return Boolean is
       begin
@@ -177,6 +176,32 @@ procedure Scheme is
                   I := 1;
             end;
          end loop;
+      end;
+
+      function Read_Integer (Str : U_Str.Unbounded_String;
+                             I : Integer) return Access_Object is
+         Sign : Integer := 1;
+         Num : Integer := 0;
+         J : Integer := I;
+      begin
+         if Element(Str, J) = '-' then
+            Sign := -1;
+            J := J + 1;
+         end if;
+
+         while Length(Str) >= J and then Is_Digit(Element(Str, J)) loop
+            Num := (Num * 10);
+            Num := Num + (Character'Pos(Element(Str, J)) - Character'Pos('0'));
+            J := J + 1;
+         end loop;
+         Num := Num * Sign;
+
+         if J = Length(Str) + 1 or else Is_Delimiter(Element(Str, J)) then
+            return Make_Integer(Num);
+         else
+            Stderr("Number not followed by a delimiter.");
+            raise Constraint_Error;
+         end if;
       end;
 
    begin
@@ -248,6 +273,7 @@ procedure Scheme is
                   when Ada.Strings.Index_Error =>
                      return Make_Char(Character'Val(10));
                end;
+
             else
                -- Read a boolean
                case Element(Str, I) is
@@ -261,25 +287,7 @@ procedure Scheme is
 
          elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
             -- Read an integer
-
-            if Element(Str, I) = '-' then
-               Sign := -1;
-               I := I + 1;
-            end if;
-
-            while Length(Str) >= I and then Is_Digit(Element(Str, I)) loop
-               Num := (Num * 10);
-               Num := Num + (Character'Pos(Element(Str, I)) - Character'Pos('0'));
-               I := I + 1;
-            end loop;
-            Num := Num * Sign;
-
-            if I = Length(Str) + 1 or else Is_Delimiter(Element(Str, I)) then
-               return Make_Integer(Num);
-            else
-               Stderr("Number not followed by a delimiter.");
-               raise Constraint_Error;
-            end if;
+            return Read_Integer(Str, I);
          else
             Stderr("Read illegal state.");
             raise Constraint_Error;
