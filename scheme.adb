@@ -130,7 +130,7 @@ procedure Scheme is
    function Read return Access_Object is
 
       Str : U_Str.Unbounded_String;
-      I, Sign : Integer := 1;
+      I : Integer := 1;
 
       function Is_Delimiter (C : Character) return Boolean is
       begin
@@ -143,6 +143,7 @@ procedure Scheme is
          return C = ' ';
       end;
 
+      -- TODO: This should be rewritten as a function.
       procedure Read_String (Str : in out U_Str.Unbounded_String;
                              Obj_Str : in out U_Str.Unbounded_String;
                              I : in out Integer) is
@@ -204,6 +205,36 @@ procedure Scheme is
          end if;
       end;
 
+      function Read_Character (Str : U_Str.Unbounded_String;
+                               I : Integer) return Access_Object is
+         J : Integer := I;
+      begin
+         -- Check for "#\space" and "#\newline"
+         begin
+            if Element(Str, J) = 's' then
+               if Slice(Str, J, J + 4) = "space" then
+                  return Make_Char(' ');
+               end if;
+            elsif Element(Str, J) = 'n' then
+               if Slice(Str, J, J + 6) = "newline" then
+                  return Make_Char(Character'Val(10));
+               end if;
+            end if;
+         exception
+            when Ada.Strings.Index_Error =>
+               null;
+         end;
+
+         -- If the index fails, that means a newline was entered since Ada
+         -- won't keep the last \n.
+         begin
+            return Make_Char(Element(Str, I));
+         exception
+            when Ada.Strings.Index_Error =>
+               return Make_Char(Character'Val(10));
+         end;
+      end;
+
    begin
       Str := Get_Line;
 
@@ -248,31 +279,7 @@ procedure Scheme is
             if Element(Str, I) = '\' then
                -- Read a character
                I := I + 1;
-
-               -- Check for "#\space" and "#\newline"
-               begin
-                  if Element(Str, I) = 's' then
-                     if Slice(Str, I, I + 4) = "space" then
-                        return Make_Char(' ');
-                     end if;
-                  elsif Element(Str, I) = 'n' then
-                     if Slice(Str, I, I + 6) = "newline" then
-                        return Make_Char(Character'Val(10));
-                     end if;
-                  end if;
-               exception
-                  when Ada.Strings.Index_Error =>
-                     null;
-               end;
-
-               -- If the index fails, that means a newline was entered since Ada
-               -- won't keep the last \n.
-               begin
-                  return Make_Char(Element(Str, I));
-               exception
-                  when Ada.Strings.Index_Error =>
-                     return Make_Char(Character'Val(10));
-               end;
+               return Read_Character(Str, I);
 
             else
                -- Read a boolean
