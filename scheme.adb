@@ -451,6 +451,7 @@ procedure Scheme is
 
          if Element(Str, I) = ')' then
             Obj := The_Empty_List;
+            I := I + 1;
             return;
          end if;
 
@@ -472,6 +473,7 @@ procedure Scheme is
                   end if;
 
                   Obj := Cons(Car_Obj, Cdr_Obj);
+                  I := I + 1;
                   return;
 
                else
