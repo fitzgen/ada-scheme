@@ -127,10 +127,19 @@ procedure Scheme is
 
    -- READ ----------------------------------------------------------------
 
-   function Read return Access_Object is
+   procedure Read (Str : in out U_Str.Unbounded_String;
+                   Obj : out Access_Object) is
 
-      Str : U_Str.Unbounded_String;
       I : Integer := 1;
+
+      procedure Eat_Whitespace (Str : in U_Str.Unbounded_String;
+                                I : in out Integer) is
+      begin
+         loop
+            exit when Element(Str, I) /= ' ';
+            I := I + 1;
+         end loop;
+      end;
 
       function Is_Delimiter (C : Character) return Boolean is
       begin
@@ -143,7 +152,6 @@ procedure Scheme is
          return C = ' ';
       end;
 
-      -- TODO: This should be rewritten as a function.
       procedure Read_String (Str : in out U_Str.Unbounded_String;
                              Obj_Str : in out U_Str.Unbounded_String;
                              I : in out Integer) is
@@ -179,64 +187,69 @@ procedure Scheme is
          end loop;
       end;
 
-      function Read_Integer (Str : U_Str.Unbounded_String;
-                             I : Integer) return Access_Object is
+      procedure Read_Integer (Str : in out U_Str.Unbounded_String;
+                              I : in out Integer;
+                              Obj : in out Access_Object) is
          Sign : Integer := 1;
          Num : Integer := 0;
-         J : Integer := I;
       begin
-         if Element(Str, J) = '-' then
+         if Element(Str, I) = '-' then
             Sign := -1;
-            J := J + 1;
+            I := I + 1;
          end if;
 
-         while Length(Str) >= J and then Is_Digit(Element(Str, J)) loop
+         while Length(Str) >= I and then Is_Digit(Element(Str, I)) loop
             Num := (Num * 10);
-            Num := Num + (Character'Pos(Element(Str, J)) - Character'Pos('0'));
-            J := J + 1;
+            Num := Num + (Character'Pos(Element(Str, I)) - Character'Pos('0'));
+            I := I + 1;
          end loop;
          Num := Num * Sign;
 
-         if J = Length(Str) + 1 or else Is_Delimiter(Element(Str, J)) then
-            return Make_Integer(Num);
+         if I = Length(Str) + 1 or else Is_Delimiter(Element(Str, I)) then
+            Obj := Make_Integer(Num);
+            return;
          else
             Stderr("Number not followed by a delimiter.");
             raise Constraint_Error;
          end if;
       end;
 
-      function Read_Character (Str : U_Str.Unbounded_String;
-                               I : Integer) return Access_Object is
-         J : Integer := I;
+      procedure Read_Character (Str : in out U_Str.Unbounded_String;
+                                I : in out Integer;
+                                Obj : in out Access_Object) is
       begin
          -- Check for "#\space" and "#\newline"
          begin
-            if Element(Str, J) = 's' then
-               if Slice(Str, J, J + 4) = "space" then
-                  return Make_Char(' ');
+            if Element(Str, I) = 's' then
+               if Slice(Str, I, I + 4) = "space" then
+                  Obj := Make_Char(' ');
+                  return;
                end if;
-            elsif Element(Str, J) = 'n' then
-               if Slice(Str, J, J + 6) = "newline" then
-                  return Make_Char(Character'Val(10));
+            elsif Element(Str, I) = 'n' then
+               if Slice(Str, I, I + 6) = "newline" then
+                  Obj := Make_Char(Character'Val(10));
+                  return;
                end if;
             end if;
          exception
             when Ada.Strings.Index_Error =>
+               -- TODO: What needs to happen here?
                null;
          end;
 
          -- If the index fails, that means a newline was entered since Ada
          -- won't keep the last \n.
          begin
-            return Make_Char(Element(Str, I));
+            Obj := Make_Char(Element(Str, I));
+            return;
          exception
             when Ada.Strings.Index_Error =>
-               return Make_Char(Character'Val(10));
+               Obj := Make_Char(Character'Val(10));
+               return;
          end;
       end;
 
    begin
-      Str := Get_Line;
 
       while I <= Length(Str) loop
          if Is_Space(Element(Str, I)) then
@@ -250,7 +263,8 @@ procedure Scheme is
                Obj_Str : U_Str.Unbounded_String;
             begin
                Read_String(Str, Obj_Str, I);
-               return Make_String(Obj_Str);
+               Obj := Make_String(Obj_Str);
+               return;
             end;
 
          -- Lists
@@ -260,7 +274,8 @@ procedure Scheme is
                begin
                   if Element(Str, I) = ')' then
                      -- Read the empty list
-                     return The_Empty_List;
+                     Obj := The_Empty_List;
+                     return;
                   elsif Element(Str, I) = ' ' then
                      I := I + 1;
                   else
@@ -279,30 +294,33 @@ procedure Scheme is
             if Element(Str, I) = '\' then
                -- Read a character
                I := I + 1;
-               return Read_Character(Str, I);
+               Read_Character(Str, I, Obj);
+               return;
 
             else
                -- Read a boolean
                case Element(Str, I) is
-                  when 't' => return True_Singleton;
-                  when 'f' => return False_Singleton;
+                  when 't' => Obj := True_Singleton;
+                  when 'f' => Obj := False_Singleton;
                   when others =>
                      Stderr("Unknown boolean literal.");
                      raise Constraint_Error;
                end case;
+               return;
             end if;
 
          elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
             -- Read an integer
-            return Read_Integer(Str, I);
+            Read_Integer(Str, I, Obj);
+            return;
          else
             Stderr("Read illegal state.");
             raise Constraint_Error;
          end if;
       end loop;
 
-      Stderr("Uh oh read is returning null");
-      return null;
+      Stderr("Uh oh read is returning without setting the Obj");
+      return;
    end;
 
    -- EVAL ----------------------------------------------------------------
@@ -369,6 +387,9 @@ procedure Scheme is
       end case;
    end;
 
+   Str : U_Str.Unbounded_String;
+   Obj : Access_Object;
+
 begin
 
    Init;
@@ -379,7 +400,9 @@ begin
 
    loop
       Put("> ");
-      Print(Eval(Read));
+      Get_Line(Str);
+      Read(Str, Obj);
+      Print(Eval(Obj));
       New_Line;
    end loop;
 
@@ -388,4 +411,4 @@ end;
 
 -- MUSIC ------------------------------------------------------------------
 
--- Lifer's Group, Grand Puba, Nightmares On Wax
+-- Lifer's Group, Grand Puba, Nightmares On Wax, Binary Star
