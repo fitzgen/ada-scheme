@@ -236,6 +236,7 @@ procedure Scheme is
                   I := 1;
             end;
          end loop;
+         I := I + 1;
       end;
 
       procedure Read_Integer (Str : in out U_Str.Unbounded_String;
@@ -274,17 +275,18 @@ procedure Scheme is
             if Element(Str, I) = 's' then
                if Slice(Str, I, I + 4) = "space" then
                   Obj := Make_Char(' ');
+                  I := I + 5;
                   return;
                end if;
             elsif Element(Str, I) = 'n' then
                if Slice(Str, I, I + 6) = "newline" then
                   Obj := Make_Char(Character'Val(10));
+                  I := I + 7;
                   return;
                end if;
             end if;
          exception
             when Ada.Strings.Index_Error =>
-               -- TODO: What needs to happen here?
                null;
          end;
 
@@ -292,6 +294,7 @@ procedure Scheme is
          -- won't keep the last \n.
          begin
             Obj := Make_Char(Element(Str, I));
+            I := I + 1;
             return;
          exception
             when Ada.Strings.Index_Error =>
@@ -368,7 +371,7 @@ procedure Scheme is
                   return;
                end;
 
-               -- Lists
+            -- Lists
             elsif Element(Str, I) = '(' then
                I := I + 1;
                Read_Pair(Str, I, Obj);
@@ -391,6 +394,7 @@ procedure Scheme is
                         Stderr("Unknown boolean literal.");
                         raise Constraint_Error;
                   end case;
+                  I := I + 1;
                   return;
                end if;
 
