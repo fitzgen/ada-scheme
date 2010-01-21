@@ -18,8 +18,6 @@ procedure Scheme is
       Put_Line(Str);
    end;
 
-   package U_Str renames Ada.Strings.Unbounded;
-
    -- MODEL ---------------------------------------------------------------
 
    type Object_Type is (Int, Bool, Char, Strng, Empty_List, Pair);
@@ -36,7 +34,7 @@ procedure Scheme is
       Int : Integer;
       Bool : Boolean;
       Char : Character;
-      Strng : U_Str.Unbounded_String;
+      Strng : Unbounded_String;
       Pair : Pair_Object;
    end record;
 
@@ -114,7 +112,7 @@ procedure Scheme is
       return Obj;
    end;
 
-   function Make_String (Str : U_Str.Unbounded_String) return Access_Object is
+   function Make_String (Str : Unbounded_String) return Access_Object is
       Obj : Access_Object;
    begin
       Obj := Allowc_Object;
@@ -314,16 +312,16 @@ procedure Scheme is
 
    -- READ ----------------------------------------------------------------
 
-   procedure Read (Str : in out U_Str.Unbounded_String;
+   procedure Read (Str : in out Unbounded_String;
                    Obj : out Access_Object) is
 
-      procedure Read_From_Index (Str : in out U_Str.Unbounded_String;
+      procedure Read_From_Index (Str : in out Unbounded_String;
                                  I : in out Integer;
                                  Obj : in out Access_Object);
 
       I : Integer := 1;
 
-      procedure Eat_Whitespace (Str : in U_Str.Unbounded_String;
+      procedure Eat_Whitespace (Str : in Unbounded_String;
                                 I : in out Integer) is
       begin
          loop
@@ -343,8 +341,8 @@ procedure Scheme is
          return C = ' ';
       end;
 
-      procedure Read_String (Str : in out U_Str.Unbounded_String;
-                             Obj_Str : in out U_Str.Unbounded_String;
+      procedure Read_String (Str : in out Unbounded_String;
+                             Obj_Str : in out Unbounded_String;
                              I : in out Integer) is
       begin
          loop
@@ -379,7 +377,7 @@ procedure Scheme is
          I := I + 1;
       end;
 
-      procedure Read_Integer (Str : in out U_Str.Unbounded_String;
+      procedure Read_Integer (Str : in out Unbounded_String;
                               I : in out Integer;
                               Obj : in out Access_Object) is
          Sign : Integer := 1;
@@ -406,7 +404,7 @@ procedure Scheme is
          end if;
       end;
 
-      procedure Read_Character (Str : in out U_Str.Unbounded_String;
+      procedure Read_Character (Str : in out Unbounded_String;
                                 I : in out Integer;
                                 Obj : in out Access_Object) is
       begin
@@ -443,7 +441,7 @@ procedure Scheme is
          end;
       end;
 
-      procedure Read_Pair (Str : in out U_Str.Unbounded_String;
+      procedure Read_Pair (Str : in out Unbounded_String;
                            I : in out Integer;
                            Obj : in out Access_Object) is
          Car_Obj : Access_Object;
@@ -490,7 +488,7 @@ procedure Scheme is
          end loop;
       end;
 
-      procedure Read_From_Index(Str : in out U_Str.Unbounded_String;
+      procedure Read_From_Index(Str : in out Unbounded_String;
                                 I : in out Integer;
                                 Obj : in out Access_Object) is
       begin
@@ -504,7 +502,7 @@ procedure Scheme is
                -- Read a String
                I := I + 1;
                declare
-                  Obj_Str : U_Str.Unbounded_String;
+                  Obj_Str : Unbounded_String;
                begin
                   Read_String(Str, Obj_Str, I);
                   Obj := Make_String(Obj_Str);
@@ -602,7 +600,7 @@ procedure Scheme is
             end if;
          when Char =>
             declare
-               Str : U_Str.Unbounded_String;
+               Str : Unbounded_String;
             begin
                Append(Str, "#\ ");
                case Obj.all.Data.Char is
@@ -642,7 +640,7 @@ procedure Scheme is
       end case;
    end;
 
-   Str : U_Str.Unbounded_String;
+   Str : Unbounded_String;
    Obj : Access_Object;
 
 begin
