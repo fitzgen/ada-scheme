@@ -156,7 +156,147 @@ procedure Scheme is
       Pair_Obj.all.Data.Pair.Cdr := Val;
    end;
 
-   -- TODO: caaaar through cddddr, etc...
+   -- Thank the RMS for keyboard macros... How else would I have made all of
+   --  these car/cdr combos??
+   function caar(Obj : Access_Object) return Access_Object is
+   begin
+      return car(car(obj));
+   end;
+
+   function cadr(Obj : Access_Object) return Access_Object is
+   begin
+      return car(cdr(obj));
+   end;
+
+   function cdar(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(car(obj));
+   end;
+
+   function cddr(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(cdr(obj));
+   end;
+
+   function caaar(Obj : Access_Object) return Access_Object is
+   begin
+      return car(car(car(obj)));
+   end;
+
+   function caadr(Obj : Access_Object) return Access_Object is
+   begin
+      return car(car(cdr(obj)));
+   end;
+
+   function cadar(Obj : Access_Object) return Access_Object is
+   begin
+      return car(cdr(car(obj)));
+   end;
+
+   function caddr(Obj : Access_Object) return Access_Object is
+   begin
+      return car(cdr(cdr(obj)));
+   end;
+
+   function cdaar(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(car(car(obj)));
+   end;
+
+   function cdadr(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(car(cdr(obj)));
+   end;
+
+   function cddar(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(cdr(car(obj)));
+   end;
+
+   function cdddr(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(cdr(cdr(obj)));
+   end;
+
+   function caaaar(Obj : Access_Object) return Access_Object is
+   begin
+      return car(car(car(car(obj))));
+   end;
+
+   function caaadr(Obj : Access_Object) return Access_Object is
+   begin
+      return car(car(car(cdr(obj))));
+   end;
+
+   function caadar(Obj : Access_Object) return Access_Object is
+   begin
+      return car(car(cdr(car(obj))));
+   end;
+
+   function caaddr(Obj : Access_Object) return Access_Object is
+   begin
+      return car(car(cdr(cdr(obj))));
+   end;
+
+   function cadaar(Obj : Access_Object) return Access_Object is
+   begin
+      return car(cdr(car(car(obj))));
+   end;
+
+   function cadadr(Obj : Access_Object) return Access_Object is
+   begin
+      return car(cdr(car(cdr(obj))));
+   end;
+
+   function caddar(Obj : Access_Object) return Access_Object is
+   begin
+      return car(cdr(cdr(car(obj))));
+   end;
+
+   function cadddr(Obj : Access_Object) return Access_Object is
+   begin
+      return car(cdr(cdr(cdr(obj))));
+   end;
+
+   function cdaaar(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(car(car(car(obj))));
+   end;
+
+   function cdaadr(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(car(car(cdr(obj))));
+   end;
+
+   function cdadar(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(car(cdr(car(obj))));
+   end;
+
+   function cdaddr(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(car(cdr(cdr(obj))));
+   end;
+
+   function cddaar(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(cdr(car(car(obj))));
+   end;
+
+   function cddadr(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(cdr(car(cdr(obj))));
+   end;
+
+   function cdddar(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(cdr(cdr(car(obj))));
+   end;
+
+   function cddddr(Obj : Access_Object) return Access_Object is
+   begin
+      return cdr(cdr(cdr(cdr(obj))));
+   end;
 
    procedure Init is
    begin
