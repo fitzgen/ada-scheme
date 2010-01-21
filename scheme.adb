@@ -20,7 +20,7 @@ procedure Scheme is
 
    -- MODEL ---------------------------------------------------------------
 
-   type Object_Type is (Int, Bool, Char, Strng, Empty_List, Pair);
+   type Object_Type is (Int, Bool, Char, Strng, Empty_List, Pair, Symbol);
 
    type Object;
    type Access_Object is access Object;
@@ -36,6 +36,7 @@ procedure Scheme is
       Char : Character;
       Strng : Unbounded_String;
       Pair : Pair_Object;
+      Symbol : Unbounded_String;
    end record;
 
    type Object is record
@@ -53,6 +54,7 @@ procedure Scheme is
    True_Singleton : Access_Object;
    False_Singleton : Access_Object;
    The_Empty_List : Access_Object;
+   Symbol_Table : Access_Object;
 
    function Is_Boolean (Obj : Access_Object) return Boolean is
    begin
@@ -94,31 +96,9 @@ procedure Scheme is
       return Obj.all.O_Type = Pair;
    end;
 
-   function Make_Integer (Value : Integer) return Access_Object is
-      Obj : Access_Object;
+   function Is_Symbol (Obj : Access_Object) return Boolean is
    begin
-      Obj := Allowc_Object;
-      Obj.all.O_Type := Int;
-      Obj.all.Data.Int := Value;
-      return Obj;
-   end;
-
-   function Make_Char (C : Character) return Access_Object is
-      Obj : Access_Object;
-   begin
-      Obj := Allowc_Object;
-      Obj.all.O_Type := Char;
-      Obj.all.Data.Char := C;
-      return Obj;
-   end;
-
-   function Make_String (Str : Unbounded_String) return Access_Object is
-      Obj : Access_Object;
-   begin
-      Obj := Allowc_Object;
-      Obj.all.O_Type := Strng;
-      Obj.all.Data.Strng := Str;
-      return Obj;
+      return Obj.all.O_Type = Symbol;
    end;
 
    function Cons (Car : Access_Object;
@@ -296,6 +276,60 @@ procedure Scheme is
       return cdr(cdr(cdr(cdr(obj))));
    end;
 
+   function Make_Symbol (Value : Unbounded_String) return Access_Object is
+      Obj : Access_Object;
+      Element : Access_Object;
+
+      function Same_Str(One, Two : Unbounded_String) return Boolean is
+      begin
+         return Length(One) = Length(Two) and then One = Two;
+      end;
+
+   begin
+      -- Search for the symbol in the symbol table.
+      Element := Symbol_Table;
+      while Is_The_Empty_List(Element) /= True loop
+         if Same_Str(Car(Element).all.Data.Symbol, Value) then
+            return Car(Element);
+         end if;
+         Element := Cdr(Element);
+      end loop;
+
+      Obj := Allowc_Object;
+      Obj.all.O_Type := Symbol;
+      Obj.all.Data.Symbol := Value;
+      Symbol_Table := Cons(Obj, Symbol_Table);
+      return Obj;
+   end;
+
+   function Make_Integer (Value : Integer) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Allowc_Object;
+      Obj.all.O_Type := Int;
+      Obj.all.Data.Int := Value;
+      return Obj;
+   end;
+
+   function Make_Char (C : Character) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Allowc_Object;
+      Obj.all.O_Type := Char;
+      Obj.all.Data.Char := C;
+      return Obj;
+   end;
+
+   function Make_String (Str : Unbounded_String) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Allowc_Object;
+      Obj.all.O_Type := Strng;
+      Obj.all.Data.Strng := Str;
+      return Obj;
+   end;
+
+
    procedure Init is
    begin
       The_Empty_List := Allowc_Object;
@@ -308,6 +342,8 @@ procedure Scheme is
       True_Singleton := Allowc_Object;
       True_Singleton.all.O_Type := Bool;
       True_Singleton.all.Data.Bool := True;
+
+      Symbol_Table := The_Empty_List;
    end;
 
    -- READ ----------------------------------------------------------------
@@ -339,6 +375,14 @@ procedure Scheme is
       function Is_Space (C : Character) return Boolean is
       begin
          return C = ' ';
+      end;
+
+      function Is_Initial (C : Character) return Boolean is
+      begin
+         return Is_Alphanumeric(C) or else C = '*' or else
+           C = '/' or else C = '>' or else
+           C = '<' or else C = '=' or else
+           C = '?' or else C = '!';
       end;
 
       procedure Read_String (Str : in out Unbounded_String;
@@ -511,6 +555,33 @@ procedure Scheme is
                   return;
                end;
 
+            elsif
+              Is_Initial(Element(Str, I)) or else
+              ((Element(Str, I) = '+' or else Element(Str, I) = '-') and then
+                 Is_Delimiter(Element(Str, I + 1)))
+            then
+               declare
+                  Symb_Str : Unbounded_String;
+               begin
+                  begin
+                     while
+                       Is_Initial(Element(Str, I)) or else Is_Digit(Element(Str, I))
+                       or else Element(Str, I) = '+' or else Element(Str, I) = '-'
+                     loop
+                        Append(Symb_Str, Element(Str, I));
+                        I := I + 1;
+                     end loop;
+                  exception
+                     when Ada.Strings.Index_Error =>
+                        -- End of line, no more chars to add to the symbol
+                        --  string.
+                        null;
+                  end;
+
+                  Obj := Make_Symbol(Symb_Str);
+                  return;
+               end;
+
             -- Lists
             elsif Element(Str, I) = '(' then
                I := I + 1;
@@ -600,6 +671,8 @@ procedure Scheme is
             else
                Put("#f");
             end if;
+         when Symbol =>
+            Put(Obj.all.Data.Symbol);
          when Char =>
             declare
                Str : Unbounded_String;
