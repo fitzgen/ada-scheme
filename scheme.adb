@@ -22,21 +22,28 @@ procedure Scheme is
 
    -- MODEL ---------------------------------------------------------------
 
-   type Object_Type is (Int, Bool, Char, Strng, Empty_List);
+   type Object_Type is (Int, Bool, Char, Strng, Empty_List, Pair);
+
+   type Object;
+   type Access_Object is access Object;
+
+   type Pair_Object is record
+      Car : Access_Object;
+      Cdr : Access_Object;
+   end record;
 
    type Object_Data is record
       Int : Integer;
       Bool : Boolean;
       Char : Character;
       Strng : U_Str.Unbounded_String;
+      Pair : Pair_Object;
    end record;
 
    type Object is record
       O_Type : Object_Type;
       Data : Object_Data;
    end record;
-
-   type Access_Object is access Object;
 
    function Allowc_Object return Access_Object is
       Obj : Access_Object;
@@ -84,6 +91,11 @@ procedure Scheme is
       return Obj.all.O_Type = Strng;
    end;
 
+   function Is_Pair (Obj : Access_Object) return Boolean is
+   begin
+      return Obj.all.O_Type = Pair;
+   end;
+
    function Make_Integer (Value : Integer) return Access_Object is
       Obj : Access_Object;
    begin
@@ -111,6 +123,41 @@ procedure Scheme is
       return Obj;
    end;
 
+   function Cons (Car : Access_Object;
+                  Cdr : Access_Object) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Allowc_Object;
+      Obj.all.O_Type := Pair;
+      Obj.all.Data.Pair.Car := Car;
+      Obj.all.Data.Pair.Cdr := Cdr;
+      return Obj;
+   end;
+
+   function Car (Pair_Obj : Access_Object) return Access_Object is
+   begin
+      return Pair_Obj.all.Data.Pair.Car;
+   end;
+
+   procedure Set_Car (Pair_Obj : in out Access_Object;
+                      Val : in Access_Object) is
+   begin
+      Pair_Obj.all.Data.Pair.Car := Val;
+   end;
+
+   function Cdr (Pair_Obj : Access_Object) return Access_Object is
+   begin
+      return Pair_Obj.all.Data.Pair.Cdr;
+   end;
+
+   procedure Set_Cdr (Pair_Obj : in out Access_Object;
+                      Val : in Access_Object) is
+   begin
+      Pair_Obj.all.Data.Pair.Cdr := Val;
+   end;
+
+   -- TODO: caaaar through cddddr, etc...
+
    procedure Init is
    begin
       The_Empty_List := Allowc_Object;
@@ -129,6 +176,10 @@ procedure Scheme is
 
    procedure Read (Str : in out U_Str.Unbounded_String;
                    Obj : out Access_Object) is
+
+      procedure Read_From_Index (Str : in out U_Str.Unbounded_String;
+                                 I : in out Integer;
+                                 Obj : in out Access_Object);
 
       I : Integer := 1;
 
@@ -249,80 +300,117 @@ procedure Scheme is
          end;
       end;
 
-   begin
+      procedure Read_Pair (Str : in out U_Str.Unbounded_String;
+                           I : in out Integer;
+                           Obj : in out Access_Object) is
+         Car_Obj : Access_Object;
+         Cdr_Obj : Access_Object;
+      begin
+         Eat_Whitespace(Str, I);
 
-      while I <= Length(Str) loop
-         if Is_Space(Element(Str, I)) then
-            -- Continue
-            I := I + 1;
+         if Element(Str, I) = ')' then
+            Obj := The_Empty_List;
+            return;
+         end if;
 
-         elsif Element(Str, I) = '"' then
-            -- Read a String
-            I := I + 1;
-            declare
-               Obj_Str : U_Str.Unbounded_String;
+         Read_From_Index(Str, I, Car_Obj);
+         Eat_Whitespace(Str, I);
+
+         loop
             begin
-               Read_String(Str, Obj_Str, I);
-               Obj := Make_String(Obj_Str);
-               return;
-            end;
+               if Element(Str, I) = '.' then
+                  -- Improper list
+                  I := I + 1;
+                  Eat_Whitespace(Str, I);
+                  Read_From_Index(Str, I, Cdr_Obj);
 
-         -- Lists
-         elsif Element(Str, I) = '(' then
-            I := I + 1;
-            loop
-               begin
-                  if Element(Str, I) = ')' then
-                     -- Read the empty list
-                     Obj := The_Empty_List;
-                     return;
-                  elsif Element(Str, I) = ' ' then
-                     I := I + 1;
-                  else
-                     Stderr("Only the empty list is implemented!");
+                  Eat_Whitespace(Str, I);
+                  if Element(Str, I) /= ')' then
+                     Stderr("No trailing paren after pair.");
                      raise Constraint_Error;
                   end if;
-               exception
-                  when Ada.Strings.Index_Error =>
-                     Str := Get_Line;
-                     I := 1;
-               end;
-            end loop;
 
-         elsif Element(Str, I) = '#' then
-            I := I + 1;
-            if Element(Str, I) = '\' then
-               -- Read a character
+                  Obj := Cons(Car_Obj, Cdr_Obj);
+                  return;
+
+               else
+                  -- Proper list
+                  Read_Pair(Str, I, Cdr_Obj);
+                  Obj := Cons(Car_Obj, Cdr_Obj);
+                  return;
+               end if;
+            exception
+               when Ada.Strings.Index_Error =>
+                  Get_Line(Str);
+                  I := 1;
+            end;
+         end loop;
+      end;
+
+      procedure Read_From_Index(Str : in out U_Str.Unbounded_String;
+                                I : in out Integer;
+                                Obj : in out Access_Object) is
+      begin
+
+         while I <= Length(Str) loop
+            if Is_Space(Element(Str, I)) then
+               -- Continue
                I := I + 1;
-               Read_Character(Str, I, Obj);
+
+            elsif Element(Str, I) = '"' then
+               -- Read a String
+               I := I + 1;
+               declare
+                  Obj_Str : U_Str.Unbounded_String;
+               begin
+                  Read_String(Str, Obj_Str, I);
+                  Obj := Make_String(Obj_Str);
+                  return;
+               end;
+
+               -- Lists
+            elsif Element(Str, I) = '(' then
+               I := I + 1;
+               Read_Pair(Str, I, Obj);
                return;
 
+            elsif Element(Str, I) = '#' then
+               I := I + 1;
+               if Element(Str, I) = '\' then
+                  -- Read a character
+                  I := I + 1;
+                  Read_Character(Str, I, Obj);
+                  return;
+
+               else
+                  -- Read a boolean
+                  case Element(Str, I) is
+                     when 't' => Obj := True_Singleton;
+                     when 'f' => Obj := False_Singleton;
+                     when others =>
+                        Stderr("Unknown boolean literal.");
+                        raise Constraint_Error;
+                  end case;
+                  return;
+               end if;
+
+            elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
+               -- Read an integer
+               Read_Integer(Str, I, Obj);
+               return;
             else
-               -- Read a boolean
-               case Element(Str, I) is
-                  when 't' => Obj := True_Singleton;
-                  when 'f' => Obj := False_Singleton;
-                  when others =>
-                     Stderr("Unknown boolean literal.");
-                     raise Constraint_Error;
-               end case;
-               return;
+               Stderr("Read illegal state.");
+               raise Constraint_Error;
             end if;
+         end loop;
 
-         elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
-            -- Read an integer
-            Read_Integer(Str, I, Obj);
-            return;
-         else
-            Stderr("Read illegal state.");
-            raise Constraint_Error;
-         end if;
-      end loop;
+         Stderr("Uh oh read is returning without setting the Obj");
+         return;
+      end;
 
-      Stderr("Uh oh read is returning without setting the Obj");
-      return;
+   begin
+      Read_From_Index(Str, I, Obj);
    end;
-
    -- EVAL ----------------------------------------------------------------
 
    -- Until we have lists and symbols, just echo
@@ -334,6 +422,25 @@ procedure Scheme is
    -- PRINT ---------------------------------------------------------------
 
    procedure Print (Obj : in Access_Object) is
+
+      procedure Print_Pair (Pair_Obj : in Access_Object) is
+         Car_Obj : Access_Object := Car(Pair_Obj);
+         Cdr_Obj : Access_Object := Cdr(Pair_Obj);
+      begin
+         Print(Car_Obj);
+         if Cdr_Obj.all.O_Type = Pair then
+            Put(" ");
+            Print_Pair(Cdr_Obj);
+            return;
+         elsif Cdr_Obj = The_Empty_List then
+            return;
+         else
+            Put(" . ");
+            Print(Cdr_Obj);
+            return;
+         end if;
+      end;
+
    begin
       if Obj = null then
          Stderr("Null object type.");
@@ -381,6 +488,10 @@ procedure Scheme is
             Put('"');
          when Empty_List =>
             Put("()");
+         when Pair =>
+            Put("(");
+            Print_Pair(Obj);
+            Put(")");
          when others =>
             Stderr("Cannot write unknown data type.");
             raise Constraint_Error;
