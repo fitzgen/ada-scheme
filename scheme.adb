@@ -55,6 +55,7 @@ procedure Scheme is
    False_Singleton : Access_Object;
    The_Empty_List : Access_Object;
    Symbol_Table : Access_Object;
+   Quote_Symbol : Access_Object;
 
    function Is_Boolean (Obj : Access_Object) return Boolean is
    begin
@@ -344,6 +345,7 @@ procedure Scheme is
       True_Singleton.all.Data.Bool := True;
 
       Symbol_Table := The_Empty_List;
+      Quote_Symbol := Make_Symbol(To_Unbounded_String("quote"));
    end;
 
    -- READ ----------------------------------------------------------------
@@ -555,6 +557,17 @@ procedure Scheme is
                   return;
                end;
 
+            elsif Element(Str, I) = ''' then
+               -- Read a quoted expression
+               declare
+                  Q_Obj : Access_Object;
+               begin
+                  I := I + 1;
+                  Read_From_Index(Str, I, Q_Obj);
+                  Obj := Cons(Quote_Symbol, Cons(Q_Obj, The_Empty_List));
+                  return;
+               end;
+
             elsif
               (Is_Initial(Element(Str, I)) and then not Is_Digit(Element(Str, I))) or else
               ((Element(Str, I) = '+' or else Element(Str, I) = '-') and then
@@ -626,12 +639,47 @@ procedure Scheme is
    begin
       Read_From_Index(Str, I, Obj);
    end;
+
    -- EVAL ----------------------------------------------------------------
 
-   -- Until we have lists and symbols, just echo
    function Eval (Exp : Access_Object) return Access_Object is
+
+      function Is_Self_Evaluating (Obj : Access_Object) return Boolean is
+      begin
+         return Is_Boolean(Obj) or else Is_Integer(Obj)
+           or else Is_Character(Obj) or else Is_String(Obj);
+      end;
+
+      function Is_Tagged_List (Obj : Access_Object;
+                               Tag : Access_Object) return Boolean is
+         The_Car : Access_Object;
+      begin
+         if (Is_Pair(Obj)) then
+            The_Car := Car(Obj);
+            return Is_Symbol(The_Car) and then The_Car = Tag;
+         end if;
+         return False;
+      end;
+
+      function Is_Quoted (Obj : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Obj, Quote_Symbol);
+      end;
+
+      function Text_Of_Quotation (Obj : Access_Object) return Access_Object is
+      begin
+         return Cadr(Obj);
+      end;
+
    begin
-      return Exp;
+      if Is_Self_Evaluating(Exp) then
+         return Exp;
+      elsif Is_Quoted(Exp) then
+         return Text_Of_Quotation(Exp);
+      else
+         Stderr("Cannot eval unknown expression");
+         raise Constraint_Error;
+      end if;
    end;
 
    -- PRINT ---------------------------------------------------------------
