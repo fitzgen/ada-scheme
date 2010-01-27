@@ -61,6 +61,7 @@ procedure Scheme is
    Define_Symbol : Access_Object;
    Set_Symbol : Access_Object;
    Ok_Symbol : Access_Object;
+   If_Symbol : Access_Object;
    The_Empty_Environment : Access_Object;
    The_Global_Environment : Access_Object;
 
@@ -472,6 +473,7 @@ procedure Scheme is
       Define_Symbol := Make_Symbol(To_Unbounded_String("define"));
       Set_Symbol := Make_Symbol(To_Unbounded_String("set!"));
       Ok_Symbol := Make_Symbol(To_Unbounded_String("ok"));
+      If_Symbol := Make_Symbol(To_Unbounded_String("if"));
 
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
@@ -854,6 +856,48 @@ procedure Scheme is
          return Ok_Symbol;
       end;
 
+      function Is_If (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, If_Symbol);
+      end;
+
+      function If_Has_Else (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Pair(Cdddr(Expr));
+      end;
+
+      function Eval_If_Predicate (Expr : Access_Object;
+                                  Env : Access_Object) return Access_Object is
+      begin
+         return Eval(Cadr(Expr), Env);
+      end;
+
+      function Eval_If_True (Expr : Access_Object;
+                             Env : Access_Object) return Access_Object is
+      begin
+         return Eval(Caddr(Expr), Env);
+      end;
+
+      function Eval_If_Else (Expr : Access_Object;
+                             Env : Access_Object) return Access_Object is
+      begin
+         return Eval(Cadddr(Expr), Env);
+      end;
+
+      function Eval_If (Expr : Access_Object;
+                        Env : Access_Object) return Access_Object is
+      begin
+         if not Is_False(Eval_If_Predicate(Expr, Env)) then
+            return Eval_If_True(Expr, Env);
+         else
+            if If_Has_Else(Expr) then
+               return Eval_If_Else(Expr, Env);
+            else
+               return False_Singleton;
+            end if;
+         end if;
+      end;
+
    begin
       if Is_Self_Evaluating(Exp) then
          return Exp;
@@ -865,6 +909,8 @@ procedure Scheme is
          return Eval_Assignment(Exp, Env);
       elsif Is_Definition(Exp) then
          return Eval_Definition(Exp, Env);
+      elsif Is_If(Exp) then
+         return Eval_If(Exp, Env);
       else
          Stderr("Cannot eval unknown expression");
          raise Constraint_Error;
