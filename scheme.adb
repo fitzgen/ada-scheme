@@ -556,7 +556,7 @@ procedure Scheme is
                end;
 
             elsif
-              Is_Initial(Element(Str, I)) or else
+              (Is_Initial(Element(Str, I)) and then not Is_Digit(Element(Str, I))) or else
               ((Element(Str, I) = '+' or else Element(Str, I) = '-') and then
                  Is_Delimiter(Element(Str, I + 1)))
             then
