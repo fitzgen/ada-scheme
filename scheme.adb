@@ -495,8 +495,8 @@ procedure Scheme is
       begin
          loop
             begin
-            exit when Element(Str, I) /= ' ';
-            I := I + 1;
+               exit when Element(Str, I) /= ' ';
+               I := I + 1;
             exception
                when Ada.Strings.Index_Error =>
                   Get_Line(Str);
@@ -635,9 +635,9 @@ procedure Scheme is
          if Element(Str, I) = ')' then
             loop
                begin
-            Obj := The_Empty_List;
-            I := I + 1;
-            return;
+                  Obj := The_Empty_List;
+                  I := I + 1;
+                  return;
                exception
                   when Ada.Strings.Index_Error =>
                      Get_Line(Str);
@@ -655,19 +655,19 @@ procedure Scheme is
                   -- Improper list
                   loop
                      begin
-                  I := I + 1;
-                  Eat_Whitespace(Str, I);
-                  Read_From_Index(Str, I, Cdr_Obj);
+                        I := I + 1;
+                        Eat_Whitespace(Str, I);
+                        Read_From_Index(Str, I, Cdr_Obj);
 
-                  Eat_Whitespace(Str, I);
-                  if Element(Str, I) /= ')' then
-                     Stderr("No trailing paren after pair.");
-                     raise Constraint_Error;
-                  end if;
+                        Eat_Whitespace(Str, I);
+                        if Element(Str, I) /= ')' then
+                           Stderr("No trailing paren after pair.");
+                           raise Constraint_Error;
+                        end if;
 
-                  Obj := Cons(Car_Obj, Cdr_Obj);
-                  I := I + 1;
-                  return;
+                        Obj := Cons(Car_Obj, Cdr_Obj);
+                        I := I + 1;
+                        return;
                      exception
                         when Ada.Strings.Index_Error =>
                            Get_Line(Str);
@@ -679,9 +679,9 @@ procedure Scheme is
                   -- Proper list
                   loop
                      begin
-                  Read_Pair(Str, I, Cdr_Obj);
-                  Obj := Cons(Car_Obj, Cdr_Obj);
-                  return;
+                        Read_Pair(Str, I, Cdr_Obj);
+                        Obj := Cons(Car_Obj, Cdr_Obj);
+                        return;
                      exception
                         when Ada.Strings.Index_Error =>
                            Get_Line(Str);
@@ -704,94 +704,94 @@ procedure Scheme is
 
          while I <= Length(Str) loop
             begin
-            if Is_Space(Element(Str, I)) then
-               -- Continue
-               I := I + 1;
-
-            elsif Element(Str, I) = '"' then
-               -- Read a String
-               I := I + 1;
-               declare
-                  Obj_Str : Unbounded_String;
-               begin
-                  Read_String(Str, Obj_Str, I);
-                  Obj := Make_String(Obj_Str);
-                  return;
-               end;
-
-            elsif Element(Str, I) = ''' then
-               -- Read a quoted expression
-               declare
-                  Q_Obj : Access_Object;
-               begin
+               if Is_Space(Element(Str, I)) then
+                  -- Continue
                   I := I + 1;
-                  Read_From_Index(Str, I, Q_Obj);
-                  Obj := Cons(Quote_Symbol, Cons(Q_Obj, The_Empty_List));
-                  return;
-               end;
 
-            elsif
-              (Is_Initial(Element(Str, I)) and then not Is_Digit(Element(Str, I))) or else
-              ((Element(Str, I) = '+' or else Element(Str, I) = '-') and then
-                 Is_Delimiter(Element(Str, I + 1)))
-            then
-               declare
-                  Symb_Str : Unbounded_String;
-               begin
+               elsif Element(Str, I) = '"' then
+                  -- Read a String
+                  I := I + 1;
+                  declare
+                     Obj_Str : Unbounded_String;
                   begin
-                     while
-                       Is_Initial(Element(Str, I)) or else Is_Digit(Element(Str, I))
-                       or else Element(Str, I) = '+' or else Element(Str, I) = '-'
-                     loop
-                        Append(Symb_Str, Element(Str, I));
-                        I := I + 1;
-                     end loop;
-                  exception
-                     when Ada.Strings.Index_Error =>
-                        -- End of line, no more chars to add to the symbol
-                        --  string.
-                        null;
+                     Read_String(Str, Obj_Str, I);
+                     Obj := Make_String(Obj_Str);
+                     return;
                   end;
 
-                  Obj := Make_Symbol(Symb_Str);
-                  return;
-               end;
+               elsif Element(Str, I) = ''' then
+                  -- Read a quoted expression
+                  declare
+                     Q_Obj : Access_Object;
+                  begin
+                     I := I + 1;
+                     Read_From_Index(Str, I, Q_Obj);
+                     Obj := Cons(Quote_Symbol, Cons(Q_Obj, The_Empty_List));
+                     return;
+                  end;
 
-            -- Lists
-            elsif Element(Str, I) = '(' then
-               I := I + 1;
-               Read_Pair(Str, I, Obj);
-               return;
+               elsif
+                 (Is_Initial(Element(Str, I)) and then not Is_Digit(Element(Str, I))) or else
+                 ((Element(Str, I) = '+' or else Element(Str, I) = '-') and then
+                    Is_Delimiter(Element(Str, I + 1)))
+               then
+                  declare
+                     Symb_Str : Unbounded_String;
+                  begin
+                     begin
+                        while
+                          Is_Initial(Element(Str, I)) or else Is_Digit(Element(Str, I))
+                          or else Element(Str, I) = '+' or else Element(Str, I) = '-'
+                        loop
+                           Append(Symb_Str, Element(Str, I));
+                           I := I + 1;
+                        end loop;
+                     exception
+                        when Ada.Strings.Index_Error =>
+                           -- End of line, no more chars to add to the symbol
+                           --  string.
+                           null;
+                     end;
 
-            elsif Element(Str, I) = '#' then
-               I := I + 1;
-               if Element(Str, I) = '\' then
-                  -- Read a character
+                     Obj := Make_Symbol(Symb_Str);
+                     return;
+                  end;
+
+               -- Lists
+               elsif Element(Str, I) = '(' then
                   I := I + 1;
-                  Read_Character(Str, I, Obj);
+                  Read_Pair(Str, I, Obj);
                   return;
 
+               elsif Element(Str, I) = '#' then
+                  I := I + 1;
+                  if Element(Str, I) = '\' then
+                     -- Read a character
+                     I := I + 1;
+                     Read_Character(Str, I, Obj);
+                     return;
+
+                  else
+                     -- Read a boolean
+                     case Element(Str, I) is
+                        when 't' => Obj := True_Singleton;
+                        when 'f' => Obj := False_Singleton;
+                        when others =>
+                           Stderr("Unknown boolean literal.");
+                           raise Constraint_Error;
+                     end case;
+                     I := I + 1;
+                     return;
+                  end if;
+
+               elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
+                  -- Read an integer
+                  Read_Integer(Str, I, Obj);
+                  return;
                else
-                  -- Read a boolean
-                  case Element(Str, I) is
-                     when 't' => Obj := True_Singleton;
-                     when 'f' => Obj := False_Singleton;
-                     when others =>
-                        Stderr("Unknown boolean literal.");
-                        raise Constraint_Error;
-                  end case;
-                  I := I + 1;
-                  return;
+                  Stderr("Read illegal state.");
+                  raise Constraint_Error;
                end if;
-
-            elsif Is_Digit(Element(Str, I)) or else Element(Str, I) = '-' then
-               -- Read an integer
-               Read_Integer(Str, I, Obj);
-               return;
-            else
-               Stderr("Read illegal state.");
-               raise Constraint_Error;
-            end if;
             exception
                when Ada.Strings.Index_Error =>
                   Get_Line(Str);
