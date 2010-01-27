@@ -490,12 +490,18 @@ procedure Scheme is
 
       I : Integer := 1;
 
-      procedure Eat_Whitespace (Str : in Unbounded_String;
+      procedure Eat_Whitespace (Str : in out Unbounded_String;
                                 I : in out Integer) is
       begin
          loop
+            begin
             exit when Element(Str, I) /= ' ';
             I := I + 1;
+            exception
+               when Ada.Strings.Index_Error =>
+                  Get_Line(Str);
+                  I := 1;
+            end;
          end loop;
       end;
 
@@ -627,9 +633,17 @@ procedure Scheme is
          Eat_Whitespace(Str, I);
 
          if Element(Str, I) = ')' then
+            loop
+               begin
             Obj := The_Empty_List;
             I := I + 1;
             return;
+               exception
+                  when Ada.Strings.Index_Error =>
+                     Get_Line(Str);
+                     I := 1;
+               end;
+            end loop;
          end if;
 
          Read_From_Index(Str, I, Car_Obj);
@@ -639,6 +653,8 @@ procedure Scheme is
             begin
                if Element(Str, I) = '.' then
                   -- Improper list
+                  loop
+                     begin
                   I := I + 1;
                   Eat_Whitespace(Str, I);
                   Read_From_Index(Str, I, Cdr_Obj);
@@ -652,12 +668,26 @@ procedure Scheme is
                   Obj := Cons(Car_Obj, Cdr_Obj);
                   I := I + 1;
                   return;
+                     exception
+                        when Ada.Strings.Index_Error =>
+                           Get_Line(Str);
+                           I := 1;
+                     end;
+                  end loop;
 
                else
                   -- Proper list
+                  loop
+                     begin
                   Read_Pair(Str, I, Cdr_Obj);
                   Obj := Cons(Car_Obj, Cdr_Obj);
                   return;
+                     exception
+                        when Ada.Strings.Index_Error =>
+                           Get_Line(Str);
+                           I := 1;
+                     end;
+                  end loop;
                end if;
             exception
                when Ada.Strings.Index_Error =>
@@ -673,6 +703,7 @@ procedure Scheme is
       begin
 
          while I <= Length(Str) loop
+            begin
             if Is_Space(Element(Str, I)) then
                -- Continue
                I := I + 1;
@@ -761,6 +792,11 @@ procedure Scheme is
                Stderr("Read illegal state.");
                raise Constraint_Error;
             end if;
+            exception
+               when Ada.Strings.Index_Error =>
+                  Get_Line(Str);
+                  I := 1;
+            end;
          end loop;
 
          Stderr("Uh oh read is returning without setting the Obj");
