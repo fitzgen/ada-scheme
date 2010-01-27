@@ -15,7 +15,9 @@ procedure Scheme is
    procedure Stderr (Str: in String) is
    begin
       Set_Output(Standard_Error);
-      Put_Line(Str);
+      Put("Error: ");
+      Put(Str);
+      New_Line;
    end;
 
    -- MODEL ---------------------------------------------------------------
@@ -775,11 +777,17 @@ begin
    Ada.Text_Io.Put_Line("Welcome to Bootstrap Scheme -- Ada version.");
 
    loop
-      Put("> ");
-      Get_Line(Str);
-      Read(Str, Obj);
-      Print(Eval(Obj));
-      New_Line;
+      begin
+         Put("> ");
+         Get_Line(Str);
+         Read(Str, Obj);
+         Put("; ");
+         Print(Eval(Obj));
+         New_Line;
+      exception
+         when others =>
+            Stderr("Restarting REPL");
+      end;
    end loop;
 
 end;
@@ -787,4 +795,5 @@ end;
 
 -- MUSIC ------------------------------------------------------------------
 
--- Lifer's Group, Grand Puba, Nightmares On Wax, Binary Star
+-- Lifer's Group, Grand Puba, Nightmares On Wax, Binary Star, DJ Shadow
+
