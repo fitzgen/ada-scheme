@@ -58,6 +58,11 @@ procedure Scheme is
    The_Empty_List : Access_Object;
    Symbol_Table : Access_Object;
    Quote_Symbol : Access_Object;
+   Define_Symbol : Access_Object;
+   Set_Symbol : Access_Object;
+   Ok_Symbol : Access_Object;
+   The_Empty_Environment : Access_Object;
+   The_Global_Environment : Access_Object;
 
    function Is_Boolean (Obj : Access_Object) return Boolean is
    begin
@@ -120,7 +125,7 @@ procedure Scheme is
       return Pair_Obj.all.Data.Pair.Car;
    end;
 
-   procedure Set_Car (Pair_Obj : in out Access_Object;
+   procedure Set_Car (Pair_Obj : in Access_Object;
                       Val : in Access_Object) is
    begin
       Pair_Obj.all.Data.Pair.Car := Val;
@@ -131,7 +136,7 @@ procedure Scheme is
       return Pair_Obj.all.Data.Pair.Cdr;
    end;
 
-   procedure Set_Cdr (Pair_Obj : in out Access_Object;
+   procedure Set_Cdr (Pair_Obj : in Access_Object;
                       Val : in Access_Object) is
    begin
       Pair_Obj.all.Data.Pair.Cdr := Val;
@@ -279,6 +284,122 @@ procedure Scheme is
       return cdr(cdr(cdr(cdr(obj))));
    end;
 
+   function Enclosing_Environment (Env : Access_Object) return Access_Object is
+   begin
+      return Cdr(Env);
+   end;
+
+   function First_Frame (Env : Access_Object) return Access_Object is
+   begin
+      return Car(Env);
+   end;
+
+   function Make_Frame (Vars : Access_Object;
+                        Vals : Access_Object) return Access_Object is
+   begin
+      return Cons(Vars, Vals);
+   end;
+
+   function Frame_Variables (Frame : Access_Object) return Access_Object is
+   begin
+      return Car(Frame);
+   end;
+
+   function Frame_Values (Frame : Access_Object) return Access_Object is
+   begin
+      return Cdr(Frame);
+   end;
+
+   procedure Add_Binding_To_Frame (Var : in Access_Object;
+                                   Val : in Access_Object;
+                                   Frame : in Access_Object) is
+   begin
+      Set_Car(Frame, Cons(Var, Car(Frame)));
+      Set_Cdr(Frame, Cons(Val, Cdr(Frame)));
+   end;
+
+   function Extend_Environment (Vars : Access_Object;
+                                Vals : Access_Object;
+                                Base_Env : Access_Object) return Access_Object is
+   begin
+      return Cons(Make_Frame(Vars, Vals), Base_Env);
+   end;
+
+   function Lookup_Variable_Value (Var : Access_Object;
+                                   Env : Access_Object) return Access_Object is
+      Frame, Vars, Vals : Access_Object;
+      This_Env : Access_Object := Env;
+   begin
+      while This_Env /= The_Empty_List loop
+         Frame := First_Frame(Env);
+         Vars := Frame_Variables(Frame);
+         Vals := Frame_Values(Frame);
+         while Vars /= The_Empty_List loop
+            if Var = Car(Vars) then
+               return Car(Vals);
+            else
+               Vars := Cdr(Vars);
+               Vals := Cdr(Vals);
+            end if;
+         end loop;
+         This_Env := Enclosing_Environment(This_Env);
+      end loop;
+      Stderr("Unbound variable '" & To_String(Var.all.Data.Symbol) & "'");
+      raise Constraint_Error;
+   end;
+
+   procedure Set_Variable_Value (Var : in Access_Object;
+                                 Val : in Access_Object;
+                                 Env : in Access_Object) is
+      Frame, Vars, Vals : Access_Object;
+      This_Env : Access_Object := Env;
+   begin
+      while This_Env /= The_Empty_List loop
+         Frame := First_Frame(Env);
+         Vars := Frame_Variables(Frame);
+         Vals := Frame_Values(Frame);
+         while Vars /= The_Empty_List loop
+            if Var = Car(Vars) then
+               Set_Car(Vals, Val);
+               return;
+            end if;
+            Vars := Cdr(Vars);
+            Vals := Cdr(Vals);
+         end loop;
+         This_Env := Enclosing_Environment(This_Env);
+      end loop;
+      Stderr("Unbound variable '" & To_String(Var.all.Data.Symbol) & "'");
+      raise Constraint_Error;
+   end;
+
+   procedure Define_Variable (Var : in Access_Object;
+                              Val : in Access_Object;
+                              Env : in Access_Object) is
+      Frame, Vars, Vals : Access_Object;
+   begin
+      Frame := First_Frame(Env);
+      Vars := Frame_Variables(Frame);
+      Vals := Frame_Values(Frame);
+      while Vars /= The_Empty_List loop
+         if Var = Car(Vars) then
+            Set_Car(Vals, Val);
+            return;
+         end if;
+         Vars := Cdr(Vars);
+         Vals := Cdr(Vals);
+      end loop;
+      Add_Binding_To_Frame(Var, Val, Frame);
+   end;
+
+   function Setup_Environment return Access_Object is
+      Initial_Env : Access_Object;
+   begin
+      Initial_Env := Extend_Environment(The_Empty_List,
+                                        The_Empty_List,
+                                        The_Empty_Environment);
+      return Initial_Env;
+   end;
+
    function Make_Symbol (Value : Unbounded_String) return Access_Object is
       Obj : Access_Object;
       Element : Access_Object;
@@ -348,6 +469,12 @@ procedure Scheme is
 
       Symbol_Table := The_Empty_List;
       Quote_Symbol := Make_Symbol(To_Unbounded_String("quote"));
+      Define_Symbol := Make_Symbol(To_Unbounded_String("define"));
+      Set_Symbol := Make_Symbol(To_Unbounded_String("set!"));
+      Ok_Symbol := Make_Symbol(To_Unbounded_String("ok"));
+
+      The_Empty_Environment := The_Empty_List;
+      The_Global_Environment := Setup_Environment;
    end;
 
    -- READ ----------------------------------------------------------------
@@ -644,12 +771,18 @@ procedure Scheme is
 
    -- EVAL ----------------------------------------------------------------
 
-   function Eval (Exp : Access_Object) return Access_Object is
+   function Eval (Exp : Access_Object;
+                  Env : Access_Object) return Access_Object is
 
       function Is_Self_Evaluating (Obj : Access_Object) return Boolean is
       begin
          return Is_Boolean(Obj) or else Is_Integer(Obj)
            or else Is_Character(Obj) or else Is_String(Obj);
+      end;
+
+      function Is_Variable (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Symbol(Expr);
       end;
 
       function Is_Tagged_List (Obj : Access_Object;
@@ -673,11 +806,65 @@ procedure Scheme is
          return Cadr(Obj);
       end;
 
+      function Is_Assignment (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, Set_Symbol);
+      end;
+
+      function Assignment_Variable (Expr : Access_Object) return Access_Object is
+      begin
+         return Cadr(Expr);
+      end;
+
+      function Assignment_Value (Expr : Access_Object) return Access_Object is
+      begin
+         return Caddr(Expr);
+      end;
+
+      function Is_Definition (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, Define_Symbol);
+      end;
+
+      function Definition_Variable (Expr : Access_Object) return Access_Object is
+      begin
+         return Cadr(Expr);
+      end;
+
+      function Definition_Value (Expr : Access_Object) return Access_Object is
+      begin
+         return Caddr(Expr);
+      end;
+
+      function Eval_Assignment (Expr : Access_Object;
+                                Env : Access_Object) return Access_Object is
+      begin
+         Set_Variable_Value(Assignment_Variable(Expr),
+                            Eval(Assignment_Value(Expr), Env),
+                            Env);
+         return Ok_Symbol;
+      end;
+
+      function Eval_Definition (Expr : Access_Object;
+                                Env : Access_Object) return Access_Object is
+      begin
+         Define_Variable(Definition_Variable(Expr),
+                         Eval(Definition_Value(Expr), Env),
+                         Env);
+         return Ok_Symbol;
+      end;
+
    begin
       if Is_Self_Evaluating(Exp) then
          return Exp;
+      elsif Is_Variable(Exp) then
+         return Lookup_Variable_Value(Exp, Env);
       elsif Is_Quoted(Exp) then
          return Text_Of_Quotation(Exp);
+      elsif Is_Assignment(Exp) then
+         return Eval_Assignment(Exp, Env);
+      elsif Is_Definition(Exp) then
+         return Eval_Definition(Exp, Env);
       else
          Stderr("Cannot eval unknown expression");
          raise Constraint_Error;
@@ -782,7 +969,7 @@ begin
          Get_Line(Str);
          Read(Str, Obj);
          Put("; ");
-         Print(Eval(Obj));
+         Print(Eval(Obj, The_Global_Environment));
          New_Line;
       exception
          when others =>
@@ -795,5 +982,6 @@ end;
 
 -- MUSIC ------------------------------------------------------------------
 
--- Lifer's Group, Grand Puba, Nightmares On Wax, Binary Star, DJ Shadow
+-- Lifer's Group, Grand Puba, Nightmares On Wax, Binary Star, DJ Shadow, Cut
+--  Chemist
 
