@@ -708,6 +708,13 @@ procedure Scheme is
                   -- Continue
                   I := I + 1;
 
+               elsif Element(Str, I) = ';' then
+                  -- This is a comment until the end of the line, we can skip
+                  --  the rest of this line by just raising
+                  --  Ada.Strings.Index_Error, which will make the reader think
+                  --  it hit an end-of-line and ask for a new line.
+                  raise Ada.Strings.Index_Error;
+
                elsif Element(Str, I) = '"' then
                   -- Read a String
                   I := I + 1;
