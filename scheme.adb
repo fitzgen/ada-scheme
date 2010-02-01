@@ -509,6 +509,16 @@ procedure Scheme is
       end if;
    end;
 
+   function Is_Boolean_Proc (Arguments : Access_Object) return Access_Object is
+      Obj : Access_Object := Car(Arguments);
+   begin
+      if Obj.all.O_Type = Bool then
+         return True_Singleton;
+      else
+         return False_Singleton;
+      end if;
+   end;
+
    function Cons_Proc (Arguments : Access_Object) return Access_Object is
       Car_Obj : Access_Object := Car(Arguments);
       Cdr_Obj : Access_Object := Cadr(Arguments);
@@ -568,6 +578,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("cdr")),
                       Make_Primitive_Proc(Cdr_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("boolean?")),
+                      Make_Primitive_Proc(Is_Boolean_Proc'access),
                       The_Global_Environment);
    end;
 
