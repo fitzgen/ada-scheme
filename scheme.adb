@@ -416,7 +416,7 @@ procedure Scheme is
    begin
       -- Search for the symbol in the symbol table.
       Element := Symbol_Table;
-      while Is_The_Empty_List(Element) /= True loop
+      while not Is_The_Empty_List(Element) loop
          if Same_Str(Car(Element).all.Data.Symbol, Value) then
             return Car(Element);
          end if;
@@ -1120,7 +1120,7 @@ procedure Scheme is
          when Int =>
             Put(Obj.all.Data.Int, Width => 0);
          when Bool =>
-            if Obj.all.Data.Bool = True then
+            if Obj.all.Data.Bool then
                Put("#t");
             else
                Put("#f");
