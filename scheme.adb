@@ -46,7 +46,7 @@ procedure Scheme is
       Data : Object_Data;
    end record;
 
-   function Allowc_Object return Access_Object is
+   function Alloc_Object return Access_Object is
       Obj : Access_Object;
    begin
       Obj := new Object;
@@ -114,7 +114,7 @@ procedure Scheme is
                   Cdr : Access_Object) return Access_Object is
       Obj : Access_Object;
    begin
-      Obj := Allowc_Object;
+      Obj := Alloc_Object;
       Obj.all.O_Type := Pair;
       Obj.all.Data.Pair.Car := Car;
       Obj.all.Data.Pair.Cdr := Cdr;
@@ -420,7 +420,7 @@ procedure Scheme is
          Element := Cdr(Element);
       end loop;
 
-      Obj := Allowc_Object;
+      Obj := Alloc_Object;
       Obj.all.O_Type := Symbol;
       Obj.all.Data.Symbol := Value;
       Symbol_Table := Cons(Obj, Symbol_Table);
@@ -430,7 +430,7 @@ procedure Scheme is
    function Make_Integer (Value : Integer) return Access_Object is
       Obj : Access_Object;
    begin
-      Obj := Allowc_Object;
+      Obj := Alloc_Object;
       Obj.all.O_Type := Int;
       Obj.all.Data.Int := Value;
       return Obj;
@@ -439,7 +439,7 @@ procedure Scheme is
    function Make_Char (C : Character) return Access_Object is
       Obj : Access_Object;
    begin
-      Obj := Allowc_Object;
+      Obj := Alloc_Object;
       Obj.all.O_Type := Char;
       Obj.all.Data.Char := C;
       return Obj;
@@ -448,7 +448,7 @@ procedure Scheme is
    function Make_String (Str : Unbounded_String) return Access_Object is
       Obj : Access_Object;
    begin
-      Obj := Allowc_Object;
+      Obj := Alloc_Object;
       Obj.all.O_Type := Strng;
       Obj.all.Data.Strng := Str;
       return Obj;
@@ -457,14 +457,14 @@ procedure Scheme is
 
    procedure Init is
    begin
-      The_Empty_List := Allowc_Object;
+      The_Empty_List := Alloc_Object;
       The_Empty_List.all.O_Type := Empty_List;
 
-      False_Singleton := Allowc_Object;
+      False_Singleton := Alloc_Object;
       False_Singleton.all.O_Type := Bool;
       False_Singleton.all.Data.Bool := False;
 
-      True_Singleton := Allowc_Object;
+      True_Singleton := Alloc_Object;
       True_Singleton.all.O_Type := Bool;
       True_Singleton.all.Data.Bool := True;
 
