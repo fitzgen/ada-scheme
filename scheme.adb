@@ -484,6 +484,22 @@ procedure Scheme is
       return Make_Integer(Result);
    end;
 
+   function Sub_Proc (Arguments : Access_Object) return Access_Object is
+      Result : Integer := Car(Arguments).all.Data.Int;
+      Args : Access_Object := Cdr(Arguments);
+   begin
+      if Is_The_Empty_List(Args) then
+         return Make_Integer(Result * (-1));
+      else
+         loop
+            exit when Is_The_Empty_List(Args);
+            Result := Result - Car(Args).all.Data.Int;
+            Args := Cdr(Args);
+         end loop;
+         return Make_Integer(Result);
+      end if;
+   end;
+
    function Is_Null_Proc (Arguments : Access_Object) return Access_Object is
    begin
       if Is_The_Empty_List(Car(Arguments)) then
@@ -537,6 +553,9 @@ procedure Scheme is
 
       Define_Variable(Make_Symbol(To_Unbounded_String("+")),
                       Make_Primitive_Proc(Add_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("-")),
+                      Make_Primitive_Proc(Sub_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("null?")),
                       Make_Primitive_Proc(Is_Null_Proc'access),
