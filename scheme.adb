@@ -730,6 +730,15 @@ procedure Scheme is
          end loop;
       end;
 
+      function Delimiter_At_Index(Str : Unbounded_String;
+                                  I : Integer) return Boolean is
+      begin
+         return Is_Delimiter(Element(Str, I));
+      exception
+         when Ada.Strings.Index_Error =>
+            return True;
+      end;
+
       procedure Read_From_Index(Str : in out Unbounded_String;
                                 I : in out Integer;
                                 Obj : in out Access_Object) is
@@ -773,7 +782,7 @@ procedure Scheme is
                elsif
                  (Is_Initial(Element(Str, I)) and then not Is_Digit(Element(Str, I))) or else
                  ((Element(Str, I) = '+' or else Element(Str, I) = '-') and then
-                    Is_Delimiter(Element(Str, I + 1)))
+                    Delimiter_At_Index(Str, I + 1))
                then
                   declare
                      Symb_Str : Unbounded_String;
@@ -838,8 +847,6 @@ procedure Scheme is
                   I := 1;
             end;
          end loop;
-
-         Stderr("Uh oh read is returning without setting the Obj");
          return;
       end;
 
