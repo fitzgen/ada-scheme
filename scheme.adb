@@ -22,10 +22,12 @@ procedure Scheme is
 
    -- MODEL ---------------------------------------------------------------
 
-   type Object_Type is (Int, Bool, Char, Strng, Empty_List, Pair, Symbol);
+   type Object_Type is (Int, Bool, Char, Strng, Empty_List, Pair, Symbol,
+                        Primitive_Proc);
 
    type Object;
    type Access_Object is access Object;
+   type Access_Function is access function (Args : Access_Object) return Access_Object;
 
    type Pair_Object is record
       Car : Access_Object;
@@ -39,6 +41,7 @@ procedure Scheme is
       Strng : Unbounded_String;
       Pair : Pair_Object;
       Symbol : Unbounded_String;
+      Primitive : Access_Function;
    end record;
 
    type Object is record
@@ -454,6 +457,32 @@ procedure Scheme is
       return Obj;
    end;
 
+   function Make_Primitive_Proc (Fn : Access_Function) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Alloc_Object;
+      Obj.all.O_Type := Primitive_Proc;
+      Obj.all.Data.Primitive := Fn;
+      return Obj;
+   end;
+
+   function Is_Primitive_Proc (Obj : Access_Object) return Boolean is
+   begin
+      return Obj.all.O_Type = Primitive_Proc;
+   end;
+
+   function Add_Proc (Arguments : Access_Object) return Access_Object is
+      Result : Integer := 0;
+      Args : Access_Object := Arguments;
+   begin
+      loop
+         exit when Is_The_Empty_List(Args);
+         Result := Result + Car(Args).all.Data.Int;
+         Args := Cdr(Args);
+      end loop;
+
+      return Make_Integer(Result);
+   end;
 
    procedure Init is
    begin
@@ -477,6 +506,10 @@ procedure Scheme is
 
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
+
+      Define_Variable(Make_Symbol(To_Unbounded_String("+")),
+                      Make_Primitive_Proc(Add_Proc'access),
+                      The_Global_Environment);
    end;
 
    -- READ ----------------------------------------------------------------
@@ -941,6 +974,47 @@ procedure Scheme is
          end if;
       end;
 
+      function Is_Application (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Pair(Expr);
+      end;
+
+      function Operator (Expr : Access_Object) return Access_Object is
+      begin
+         return Car(Expr);
+      end;
+
+      function Operands (Expr : Access_Object) return Access_Object is
+      begin
+         return Cdr(Expr);
+      end;
+
+      function Is_No_Operands (Ops : Access_Object) return Boolean is
+      begin
+         return Is_The_Empty_List(Ops);
+      end;
+
+      function First_Operand (Ops : Access_Object) return Access_Object is
+      begin
+         return Car(Ops);
+      end;
+
+      function Rest_Operands (Ops : Access_Object) return Access_Object is
+      begin
+         return Cdr(Ops);
+      end;
+
+      function List_Of_Values (Exps : Access_Object;
+                               Env : Access_Object) return Access_Object is
+      begin
+         if (Is_No_Operands(Exps)) then
+            return The_Empty_List;
+         else
+            return Cons(Eval(First_Operand(Exps), Env),
+                        List_Of_Values(Rest_Operands(Exps), Env));
+         end if;
+      end;
+
    begin
       if Is_Self_Evaluating(Exp) then
          return Exp;
@@ -954,6 +1028,13 @@ procedure Scheme is
          return Eval_Definition(Exp, Env);
       elsif Is_If(Exp) then
          return Eval_If(Exp, Env);
+      elsif Is_Application(Exp) then
+         declare
+            Proc : Access_Object := Eval(Operator(Exp), Env);
+            Args : Access_Object := List_Of_Values(Operands(Exp), Env);
+         begin
+            return Proc.all.Data.Primitive.all(Args);
+         end;
       else
          Stderr("Cannot eval unknown expression");
          raise Constraint_Error;
@@ -1035,6 +1116,8 @@ procedure Scheme is
             Put("(");
             Print_Pair(Obj);
             Put(")");
+         when Primitive_Proc =>
+            Put("#<procedure>");
          when others =>
             Stderr("Cannot write unknown data type.");
             raise Constraint_Error;
