@@ -539,6 +539,16 @@ procedure Scheme is
       end if;
    end;
 
+   function Is_Char_Proc (Arguments : Access_Object) return Access_Object is
+      Obj : Access_Object := Car(Arguments);
+   begin
+      if Obj.all.O_Type = Char then
+         return True_Singleton;
+      else
+         return False_Singleton;
+      end if;
+   end;
+
    function Cons_Proc (Arguments : Access_Object) return Access_Object is
       Car_Obj : Access_Object := Car(Arguments);
       Cdr_Obj : Access_Object := Cadr(Arguments);
@@ -607,6 +617,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("integer?")),
                       Make_Primitive_Proc(Is_Integer_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("char?")),
+                      Make_Primitive_Proc(Is_Char_Proc'access),
                       The_Global_Environment);
    end;
 
