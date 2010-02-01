@@ -500,6 +500,18 @@ procedure Scheme is
       return Cons(Car_Obj, Cdr_Obj);
    end;
 
+   function Car_Proc (Arguments : Access_Object) return Access_Object is
+      List_Obj : Access_Object := Car(Arguments);
+   begin
+      return Car(List_Obj);
+   end;
+
+   function Cdr_Proc (Arguments : Access_Object) return Access_Object is
+      List_Obj : Access_Object := Car(Arguments);
+   begin
+      return Cdr(List_Obj);
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -531,6 +543,12 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("cons")),
                       Make_Primitive_Proc(Cons_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("car")),
+                      Make_Primitive_Proc(Car_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("cdr")),
+                      Make_Primitive_Proc(Cdr_Proc'access),
                       The_Global_Environment);
    end;
 
