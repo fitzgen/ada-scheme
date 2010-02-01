@@ -493,6 +493,13 @@ procedure Scheme is
       end if;
    end;
 
+   function Cons_Proc (Arguments : Access_Object) return Access_Object is
+      Car_Obj : Access_Object := Car(Arguments);
+      Cdr_Obj : Access_Object := Cadr(Arguments);
+   begin
+      return Cons(Car_Obj, Cdr_Obj);
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -521,6 +528,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("null?")),
                       Make_Primitive_Proc(Is_Null_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("cons")),
+                      Make_Primitive_Proc(Cons_Proc'access),
                       The_Global_Environment);
    end;
 
