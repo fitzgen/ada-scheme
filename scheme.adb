@@ -512,7 +512,7 @@ procedure Scheme is
    function Is_Boolean_Proc (Arguments : Access_Object) return Access_Object is
       Obj : Access_Object := Car(Arguments);
    begin
-      if Obj.all.O_Type = Bool then
+      if Is_Boolean(Obj) then
          return True_Singleton;
       else
          return False_Singleton;
@@ -522,7 +522,7 @@ procedure Scheme is
    function Is_Symbol_Proc (Arguments : Access_Object) return Access_Object is
       Obj : Access_Object := Car(Arguments);
    begin
-      if Obj.all.O_Type = Symbol then
+      if Is_Symbol(obj) then
          return True_Singleton;
       else
          return False_Singleton;
@@ -532,7 +532,7 @@ procedure Scheme is
    function Is_Integer_Proc (Arguments : Access_Object) return Access_Object is
       Obj : Access_Object := Car(Arguments);
    begin
-      if Obj.all.O_Type = Int then
+      if Is_Integer(Obj) then
          return True_Singleton;
       else
          return False_Singleton;
@@ -542,7 +542,7 @@ procedure Scheme is
    function Is_Char_Proc (Arguments : Access_Object) return Access_Object is
       Obj : Access_Object := Car(Arguments);
    begin
-      if Obj.all.O_Type = Char then
+      if Is_Character(Obj) then
          return True_Singleton;
       else
          return False_Singleton;
