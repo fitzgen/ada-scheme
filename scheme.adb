@@ -559,6 +559,16 @@ procedure Scheme is
       end if;
    end;
 
+   function Is_Procedure_Proc (Arguments : Access_Object) return Access_Object is
+      Obj : Access_Object := Car(Arguments);
+   begin
+      if Is_Primitive_Proc(Obj) then
+         return True_Singleton;
+      else
+         return False_Singleton;
+      end if;
+   end;
+
    function Is_Pair_Proc (Arguments : Access_Object) return Access_Object is
       Obj : Access_Object := Car(Arguments);
    begin
@@ -646,6 +656,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("pair?")),
                       Make_Primitive_Proc(Is_Pair_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("procedure?")),
+                      Make_Primitive_Proc(Is_Procedure_Proc'access),
                       The_Global_Environment);
    end;
 
