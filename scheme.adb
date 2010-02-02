@@ -10,8 +10,6 @@ use Ada.Characters.Handling;
 use Ada.Strings.Unbounded;
 use Ada.Strings.Unbounded.Text_Io;
 
--- CHECK FOR LAMBDA: (string->symbol "λ")
-
 procedure Scheme is
 
    procedure Stderr (Str: in String) is
@@ -25,7 +23,7 @@ procedure Scheme is
    -- MODEL ---------------------------------------------------------------
 
    type Object_Type is (Int, Bool, Char, Strng, Empty_List, Pair, Symbol,
-                        Primitive_Proc);
+                        Primitive_Proc, Compound_Proc);
 
    type Object;
    type Access_Object is access Object;
@@ -36,6 +34,12 @@ procedure Scheme is
       Cdr : Access_Object;
    end record;
 
+   type Compound_Proc_Object is record
+      Parameters : Access_Object;
+      L_Body : Access_Object;
+      Env : Access_Object;
+   end record;
+
    type Object_Data is record
       Int : Integer;
       Bool : Boolean;
@@ -44,6 +48,7 @@ procedure Scheme is
       Pair : Pair_Object;
       Symbol : Unbounded_String;
       Primitive : Access_Function;
+      Compound_Proc : Compound_Proc_Object;
    end record;
 
    type Object is record
@@ -290,6 +295,24 @@ procedure Scheme is
    function cddddr(Obj : Access_Object) return Access_Object is
    begin
       return cdr(cdr(cdr(cdr(obj))));
+   end;
+
+   function Make_Compound_Proc (Parameters : Access_Object;
+                                L_Body : Access_Object;
+                                Env : Access_Object) return Access_Object is
+      Obj : Access_Object;
+   begin
+      Obj := Alloc_Object;
+      Obj.all.O_Type := Compound_Proc;
+      Obj.all.Data.Compound_Proc.Parameters := Parameters;
+      Obj.all.Data.Compound_Proc.L_Body := L_Body;
+      Obj.all.Data.Compound_Proc.Env := Env;
+      return Obj;
+   end;
+
+   function Is_Compound_Proc (Obj : Access_Object) return Boolean is
+   begin
+      return Obj.all.O_Type = Compound_Proc;
    end;
 
    function Enclosing_Environment (Env : Access_Object) return Access_Object is
@@ -644,7 +667,7 @@ procedure Scheme is
    function Is_Procedure_Proc (Arguments : Access_Object) return Access_Object is
       Obj : Access_Object := Car(Arguments);
    begin
-      if Is_Primitive_Proc(Obj) then
+      if Is_Primitive_Proc(Obj) or else Is_Compound_Proc(Obj) then
          return True_Singleton;
       else
          return False_Singleton;
@@ -1223,8 +1246,11 @@ procedure Scheme is
 
    -- EVAL ----------------------------------------------------------------
 
-   function Eval (Exp : Access_Object;
-                  Env : Access_Object) return Access_Object is
+   function Eval (Expr : Access_Object;
+                  Environ : Access_Object) return Access_Object is
+
+      Exp : Access_Object := Expr;
+      Env : Access_Object := Environ;
 
       function Is_Self_Evaluating (Obj : Access_Object) return Boolean is
       begin
@@ -1283,9 +1309,38 @@ procedure Scheme is
          return Cadr(Expr);
       end;
 
+      function Make_Lambda (Parameters : Access_Object;
+                            L_Body : Access_Object) return Access_Object;
+
       function Definition_Value (Expr : Access_Object) return Access_Object is
       begin
-         return Caddr(Expr);
+         if Is_Symbol(Expr) then
+            return Caddr(Expr);
+         else
+            return Make_Lambda(Cdadr(Expr), Cddr(Expr));
+         end if;
+      end;
+
+      function Make_Lambda (Parameters : Access_Object;
+                            L_Body : Access_Object) return Access_Object is
+      begin
+         return Cons(Lambda_Symbol, Cons(Parameters, L_Body));
+      end;
+
+      function Is_Lambda (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, Lambda_Symbol)
+           or else Is_Tagged_List(Expr, Lambda_Char_Symbol);
+      end;
+
+      function Lambda_Parameters (Expr : Access_Object) return Access_Object is
+      begin
+         return Cadr(Expr);
+      end;
+
+      function Lambda_Body (Expr : Access_Object) return Access_Object is
+      begin
+         return Cddr(Expr);
       end;
 
       function Eval_Assignment (Expr : Access_Object;
@@ -1389,7 +1444,23 @@ procedure Scheme is
          end if;
       end;
 
+      function Is_Last_Exp (Seq : Access_Object) return Boolean is
+      begin
+         return Is_The_Empty_List(Cdr(Seq));
+      end;
+
+      function First_Exp (Seq : Access_Object) return Access_Object is
+      begin
+         return Car(Seq);
+      end;
+
+      function Rest_Exps (Seq : Access_Object) return Access_Object is
+      begin
+         return Cdr(Seq);
+      end;
+
    begin
+      <<Tailcall>>
       if Is_Self_Evaluating(Exp) then
          return Exp;
       elsif Is_Variable(Exp) then
@@ -1402,12 +1473,34 @@ procedure Scheme is
          return Eval_Definition(Exp, Env);
       elsif Is_If(Exp) then
          return Eval_If(Exp, Env);
+      elsif Is_Lambda(Exp) then
+         return Make_Compound_Proc(Lambda_Parameters(Exp),
+                                   Lambda_Body(Exp),
+                                   env);
       elsif Is_Application(Exp) then
          declare
             Proc : Access_Object := Eval(Operator(Exp), Env);
             Args : Access_Object := List_Of_Values(Operands(Exp), Env);
+            Dummy : Access_Object := null;
          begin
-            return Proc.all.Data.Primitive.all(Args);
+            if Is_Primitive_Proc(Proc) then
+               return Proc.all.Data.Primitive.all(Args);
+            elsif Is_Compound_Proc(Proc) then
+               Env := Extend_Environment(Proc.all.Data.Compound_Proc.Parameters,
+                                         Args,
+                                         Proc.all.Data.Compound_Proc.Env);
+               Exp := Proc.all.Data.Compound_Proc.L_Body;
+               loop
+                  exit when Is_Last_Exp(Exp);
+                  Dummy := Eval(First_Exp(Exp), Env);
+                  Exp := Rest_Exps(Exp);
+               end loop;
+               Exp := First_Exp(Exp);
+               goto Tailcall;
+            else
+               Stderr("Unknown procedure type");
+               raise Constraint_Error;
+            end if;
          end;
       else
          Stderr("Cannot eval unknown expression");
@@ -1491,7 +1584,9 @@ procedure Scheme is
             Print_Pair(Obj);
             Put(")");
          when Primitive_Proc =>
-            Put("#<procedure>");
+            Put("#<primitive procedure>");
+         when Compound_Proc =>
+            Put("#<lambda procedure>");
          when others =>
             Stderr("Cannot write unknown data type.");
             raise Constraint_Error;
