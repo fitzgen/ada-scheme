@@ -676,6 +676,18 @@ procedure Scheme is
       return Cdr(List_Obj);
    end;
 
+   function Set_Car_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      Set_Car(Car(Arguments), Cadr(Arguments));
+      return Ok_Symbol;
+   end;
+
+   function Set_Cdr_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      Set_Cdr(Car(Arguments), Cadr(Arguments));
+      return Ok_Symbol;
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -734,6 +746,12 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("cdr")),
                       Make_Primitive_Proc(Cdr_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("set-car!")),
+                      Make_Primitive_Proc(Set_Car_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("set-cdr!")),
+                      Make_Primitive_Proc(Set_Cdr_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("boolean?")),
                       Make_Primitive_Proc(Is_Boolean_Proc'access),
