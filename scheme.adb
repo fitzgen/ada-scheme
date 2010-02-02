@@ -693,6 +693,43 @@ procedure Scheme is
       return Arguments;
    end;
 
+   function Eq_Proc (Arguments : Access_Object) return Access_Object is
+      Result : Boolean := True;
+      Last : Access_Object := Car(Arguments);
+      Args : Access_Object := Cdr(Arguments);
+   begin
+      loop
+         if Is_The_Empty_List(Args) then
+            return True_Singleton;
+         else
+            if not (Last.all.O_Type = Car(Args).all.O_Type) then
+               return False_Singleton;
+            else
+               case Last.all.O_Type is
+                  when Int =>
+                     if Last.all.Data.Int /= Car(Args).all.Data.Int then
+                        return False_Singleton;
+                     end if;
+                  when Char =>
+                     if Last.all.Data.Char /= Car(Args).all.Data.Char then
+                        return False_Singleton;
+                     end if;
+                  when Strng =>
+                     if Last.all.Data.Strng /= Car(Args).all.Data.Strng then
+                        return False_Singleton;
+                     end if;
+                  when others =>
+                     if Last /= Car(Args) then
+                        return False_Singleton;
+                     end if;
+               end case;
+               Last := Car(Args);
+               Args := Cdr(Args);
+            end if;
+         end if;
+      end loop;
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -781,6 +818,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("procedure?")),
                       Make_Primitive_Proc(Is_Procedure_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("eq?")),
+                      Make_Primitive_Proc(Eq_Proc'access),
                       The_Global_Environment);
    end;
 
