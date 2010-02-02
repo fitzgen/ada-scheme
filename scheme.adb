@@ -560,6 +560,24 @@ procedure Scheme is
       end loop;
    end;
 
+   function Gt_Proc (Arguments : Access_Object) return Access_Object is
+      Result : Boolean := True;
+      Last_Val : Integer := Car(Arguments).all.Data.Int;
+      Args : Access_Object := Cdr(Arguments);
+   begin
+      loop
+         if Is_The_Empty_List(Args) then
+            return True_Singleton;
+         else
+            if not (Last_Val > Car(Args).all.Data.Int) then
+               return False_Singleton;
+            end if;
+            Last_Val := Car(Args).all.Data.Int;
+            Args := Cdr(Args);
+         end if;
+      end loop;
+   end;
+
    function Is_Null_Proc (Arguments : Access_Object) return Access_Object is
    begin
       if Is_The_Empty_List(Car(Arguments)) then
@@ -701,6 +719,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("<")),
                       Make_Primitive_Proc(Lt_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String(">")),
+                      Make_Primitive_Proc(Gt_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("null?")),
                       Make_Primitive_Proc(Is_Null_Proc'access),
