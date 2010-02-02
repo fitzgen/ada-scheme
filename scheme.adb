@@ -524,6 +524,24 @@ procedure Scheme is
                             Cadr(Arguments).all.Data.Int);
    end;
 
+   function Equal_Proc (Arguments : Access_Object) return Access_Object is
+      Result : Boolean := True;
+      Last_Val : Integer := Car(Arguments).all.Data.Int;
+      Args : Access_Object := Cdr(Arguments);
+   begin
+      loop
+         if Is_The_Empty_List(Args) then
+            return True_Singleton;
+         else
+            if not (Car(Args).all.Data.Int = Last_Val) then
+               return False_Singleton;
+            end if;
+            Last_Val := Car(Args).all.Data.Int;
+            Args := Cdr(Args);
+         end if;
+      end loop;
+   end;
+
    function Is_Null_Proc (Arguments : Access_Object) return Access_Object is
    begin
       if Is_The_Empty_List(Car(Arguments)) then
@@ -658,7 +676,10 @@ procedure Scheme is
                       Make_Primitive_Proc(Quotient_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("remainder")),
-                      Make_Primitive_Proc(remainder_Proc'access),
+                      Make_Primitive_Proc(Remainder_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("=")),
+                      Make_Primitive_Proc(Equal_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("null?")),
                       Make_Primitive_Proc(Is_Null_Proc'access),
