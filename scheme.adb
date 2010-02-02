@@ -740,6 +740,12 @@ procedure Scheme is
       return Make_Char(Character'Val(Car(Arguments).all.Data.Int));
    end;
 
+   function Number_To_String_Proc (Arguments : Access_Object) return Access_Object is
+      Str : Unbounded_String := To_Unbounded_String(Integer'Image(Car(Arguments).all.Data.Int));
+   begin
+      return Make_String(To_Unbounded_String(Slice(Str, 2, Length(Str))));
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -837,6 +843,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("integer->char")),
                       Make_Primitive_Proc(Int_To_Char_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("number->string")),
+                      Make_Primitive_Proc(Number_To_String_Proc'access),
                       The_Global_Environment);
    end;
 
