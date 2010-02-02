@@ -500,6 +500,18 @@ procedure Scheme is
       end if;
    end;
 
+   function Multiply_Proc (Arguments : Access_Object) return Access_Object is
+      Result : Integer := 1;
+      Args : Access_Object := Arguments;
+   begin
+      loop
+         exit when Is_The_Empty_List(Args);
+         Result := Result * Car(Args).all.Data.Int;
+         Args := Cdr(Args);
+      end loop;
+      return Make_Integer(Result);
+   end;
+
    function Is_Null_Proc (Arguments : Access_Object) return Access_Object is
    begin
       if Is_The_Empty_List(Car(Arguments)) then
@@ -626,6 +638,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("-")),
                       Make_Primitive_Proc(Sub_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("*")),
+                      Make_Primitive_Proc(Multiply_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("null?")),
                       Make_Primitive_Proc(Is_Null_Proc'access),
