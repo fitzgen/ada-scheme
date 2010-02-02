@@ -688,6 +688,11 @@ procedure Scheme is
       return Ok_Symbol;
    end;
 
+   function List_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      return Arguments;
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -752,6 +757,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("set-cdr!")),
                       Make_Primitive_Proc(Set_Cdr_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("list")),
+                      Make_Primitive_Proc(List_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("boolean?")),
                       Make_Primitive_Proc(Is_Boolean_Proc'access),
