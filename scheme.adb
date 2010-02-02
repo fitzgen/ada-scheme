@@ -10,6 +10,8 @@ use Ada.Characters.Handling;
 use Ada.Strings.Unbounded;
 use Ada.Strings.Unbounded.Text_Io;
 
+-- CHECK FOR LAMBDA: (string->symbol "λ")
+
 procedure Scheme is
 
    procedure Stderr (Str: in String) is
@@ -65,6 +67,8 @@ procedure Scheme is
    Set_Symbol : Access_Object;
    Ok_Symbol : Access_Object;
    If_Symbol : Access_Object;
+   Lambda_Symbol : Access_Object;
+   Lambda_Char_Symbol : Access_Object;
    The_Empty_Environment : Access_Object;
    The_Global_Environment : Access_Object;
 
@@ -780,6 +784,8 @@ procedure Scheme is
       Set_Symbol := Make_Symbol(To_Unbounded_String("set!"));
       Ok_Symbol := Make_Symbol(To_Unbounded_String("ok"));
       If_Symbol := Make_Symbol(To_Unbounded_String("if"));
+      Lambda_Symbol := Make_Symbol(To_Unbounded_String("lambda"));
+      Lambda_Char_Symbol := Make_Symbol(To_Unbounded_String("λ"));
 
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
