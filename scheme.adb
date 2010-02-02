@@ -730,6 +730,11 @@ procedure Scheme is
       end loop;
    end;
 
+   function Char_To_Int_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      return Make_Integer(Character'Pos(Car(Arguments).all.Data.Char));
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -821,6 +826,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("eq?")),
                       Make_Primitive_Proc(Eq_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("char->integer")),
+                      Make_Primitive_Proc(Char_To_Int_Proc'access),
                       The_Global_Environment);
    end;
 
