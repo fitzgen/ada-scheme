@@ -518,6 +518,12 @@ procedure Scheme is
                             Cadr(Arguments).all.Data.Int);
    end;
 
+   function Remainder_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      return Make_Integer(Car(Arguments).all.Data.Int rem
+                            Cadr(Arguments).all.Data.Int);
+   end;
+
    function Is_Null_Proc (Arguments : Access_Object) return Access_Object is
    begin
       if Is_The_Empty_List(Car(Arguments)) then
@@ -650,6 +656,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("quotient")),
                       Make_Primitive_Proc(Quotient_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("remainder")),
+                      Make_Primitive_Proc(remainder_Proc'access),
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("null?")),
                       Make_Primitive_Proc(Is_Null_Proc'access),
