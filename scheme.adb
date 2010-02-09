@@ -1227,6 +1227,10 @@ procedure Scheme is
                   -- Read an integer
                   Read_Integer(Str, I, Obj);
                   return;
+               elsif Element(Str, I) = '_' then
+                  -- Shortcut for inspecting the env.
+                  Obj := Make_Symbol(To_Unbounded_String("_"));
+                  return;
                else
                   Stderr("Read illegal state.");
                   raise Constraint_Error;
@@ -1305,8 +1309,13 @@ procedure Scheme is
       end;
 
       function Definition_Variable (Expr : Access_Object) return Access_Object is
+         Obj : Access_Object := Cadr(Expr);
       begin
-         return Cadr(Expr);
+         if Is_Symbol(Obj) then
+            return Obj;
+         else
+            return Car(Obj);
+         end if;
       end;
 
       function Make_Lambda (Parameters : Access_Object;
@@ -1461,8 +1470,11 @@ procedure Scheme is
 
    begin
       <<Tailcall>>
-      if Is_Self_Evaluating(Exp) then
-         return Exp;
+      if Exp.all.O_Type = Symbol and then Exp.all.Data.Symbol = "_" then
+          -- Shortcut for inspecting the env.
+          return Env;
+      elsif Is_Self_Evaluating(Exp) then
+          return Exp;
       elsif Is_Variable(Exp) then
          return Lookup_Variable_Value(Exp, Env);
       elsif Is_Quoted(Exp) then
