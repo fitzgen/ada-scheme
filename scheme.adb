@@ -1314,7 +1314,7 @@ procedure Scheme is
 
       function Definition_Value (Expr : Access_Object) return Access_Object is
       begin
-         if Is_Symbol(Expr) then
+         if Is_Symbol(Cadr(Expr)) then
             return Caddr(Expr);
          else
             return Make_Lambda(Cdadr(Expr), Cddr(Expr));
