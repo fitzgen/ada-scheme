@@ -63,6 +63,8 @@ procedure Scheme is
       return Obj;
    end;
 
+   procedure Print (Obj : in Access_Object); -- REMOVE
+
    True_Singleton : Access_Object;
    False_Singleton : Access_Object;
    The_Empty_List : Access_Object;
@@ -362,7 +364,7 @@ procedure Scheme is
       This_Env : Access_Object := Env;
    begin
       while This_Env /= The_Empty_List loop
-         Frame := First_Frame(Env);
+         Frame := First_Frame(This_Env);
          Vars := Frame_Variables(Frame);
          Vals := Frame_Values(Frame);
          while Vars /= The_Empty_List loop
@@ -375,7 +377,6 @@ procedure Scheme is
          end loop;
          This_Env := Enclosing_Environment(This_Env);
       end loop;
-      Stderr("Unbound variable '" & To_String(Var.all.Data.Symbol) & "'");
       raise Constraint_Error;
    end;
 
