@@ -63,7 +63,8 @@ procedure Scheme is
       return Obj;
    end;
 
-   procedure Print (Obj : in Access_Object); -- REMOVE
+   -- Useful for debugging to declare this first so it can be used elsewhere.
+   procedure Print (Obj : in Access_Object);
 
    True_Singleton : Access_Object;
    False_Singleton : Access_Object;
@@ -1492,7 +1493,7 @@ procedure Scheme is
          return Is_Tagged_List(Expr, Cond_Symbol);
       end;
 
-      function Cond_Clauses (Expr : Access_Object) return Boolean is
+      function Cond_Clauses (Expr : Access_Object) return Access_Object is
       begin
          return Cdr(Expr);
       end;
@@ -1524,6 +1525,16 @@ procedure Scheme is
       end;
 
       function Expand_Clauses (Clauses : Access_Object) return Access_Object is
+         function Make_If (Predicate : Access_Object;
+                           Consequent : Access_Object;
+                           Alternative : Access_Object) return Access_Object is
+         begin
+            return Cons(If_Symbol,
+                        Cons(Predicate,
+                             Cons(Consequent,
+                                  Cons(Alternative,
+                                       The_Empty_List))));
+         end;
       begin
          if Is_The_Empty_List(Clauses) then
             return False_Singleton; -- No else clause
@@ -1534,13 +1545,23 @@ procedure Scheme is
             begin
                if Is_Cond_Else_Clause(First) then
                   if Is_The_Empty_List(Rest) then
-                     return Sequence_To_Expr(Rest);
+                     return Sequence_To_Expr(Cond_Actions(First));
                   else
                      Stderr("'else' is not the last clause in 'cond' expression.");
+                     raise Constraint_Error;
                   end if;
                else
+                  return Make_If(Cond_Predicate(First),
+                                 Sequence_To_Expr(Cond_Actions(First)),
+                                 Expand_Clauses(Rest));
                end if;
             end;
+         end if;
+      end;
+
+      function Cond_To_If (Expr : Access_Object) return Access_Object is
+      begin
+         return Expand_Clauses(Cond_Clauses(Expr));
       end;
 
    begin
@@ -1560,6 +1581,9 @@ procedure Scheme is
          return Eval_Definition(Exp, Env);
       elsif Is_If(Exp) then
          return Eval_If(Exp, Env);
+      elsif Is_Cond(Exp) then
+         Exp := Cond_To_If(Exp);
+         goto Tailcall;
       elsif Is_Lambda(Exp) then
          return Make_Compound_Proc(Lambda_Parameters(Exp),
                                    Lambda_Body(Exp),
@@ -1596,7 +1620,9 @@ procedure Scheme is
             end if;
          end;
       else
-         Stderr("Cannot eval unknown expression");
+         Stderr("Cannot eval unknown expression:");
+         Print(Exp);
+         New_Line;
          raise Constraint_Error;
       end if;
    end;
