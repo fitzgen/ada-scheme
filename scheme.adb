@@ -76,6 +76,9 @@ procedure Scheme is
    If_Symbol : Access_Object;
    Lambda_Symbol : Access_Object;
    Lambda_Char_Symbol : Access_Object;
+   Begin_Symbol : Access_Object;
+   Cond_Symbol : Access_Object;
+   Else_Symbol : Access_Object;
    The_Empty_Environment : Access_Object;
    The_Global_Environment : Access_Object;
 
@@ -485,6 +488,11 @@ procedure Scheme is
       return Obj;
    end;
 
+   function Make_Begin (Expr : Access_Object) return Access_Object is
+   begin
+      return Cons(Begin_Symbol, Expr);
+   end;
+
    function Make_Primitive_Proc (Fn : Access_Function) return Access_Object is
       Obj : Access_Object;
    begin
@@ -553,7 +561,6 @@ procedure Scheme is
    end;
 
    function Equal_Proc (Arguments : Access_Object) return Access_Object is
-      Result : Boolean := True;
       Last_Val : Integer := Car(Arguments).all.Data.Int;
       Args : Access_Object := Cdr(Arguments);
    begin
@@ -571,7 +578,6 @@ procedure Scheme is
    end;
 
    function Lt_Proc (Arguments : Access_Object) return Access_Object is
-      Result : Boolean := True;
       Last_Val : Integer := Car(Arguments).all.Data.Int;
       Args : Access_Object := Cdr(Arguments);
    begin
@@ -589,7 +595,6 @@ procedure Scheme is
    end;
 
    function Gt_Proc (Arguments : Access_Object) return Access_Object is
-      Result : Boolean := True;
       Last_Val : Integer := Car(Arguments).all.Data.Int;
       Args : Access_Object := Cdr(Arguments);
    begin
@@ -810,6 +815,9 @@ procedure Scheme is
       If_Symbol := Make_Symbol(To_Unbounded_String("if"));
       Lambda_Symbol := Make_Symbol(To_Unbounded_String("lambda"));
       Lambda_Char_Symbol := Make_Symbol(To_Unbounded_String("λ"));
+      Begin_Symbol := Make_Symbol(To_Unbounded_String("begin"));
+      Cond_Symbol := Make_Symbol(To_Unbounded_String("cond"));
+      Else_Symbol := Make_Symbol(To_Unbounded_String("else"));
 
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
@@ -1279,6 +1287,16 @@ procedure Scheme is
          return False;
       end;
 
+      function Is_Begin (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, Begin_Symbol);
+      end;
+
+      function Begin_Actions (Expr : Access_Object) return Access_Object is
+      begin
+         return Cdr(Expr);
+      end;
+
       function Is_Quoted (Obj : Access_Object) return Boolean is
       begin
          return Is_Tagged_List(Obj, Quote_Symbol);
@@ -1469,6 +1487,62 @@ procedure Scheme is
          return Cdr(Seq);
       end;
 
+      function Is_Cond (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, Cond_Symbol);
+      end;
+
+      function Cond_Clauses (Expr : Access_Object) return Boolean is
+      begin
+         return Cdr(Expr);
+      end;
+
+      function Cond_Predicate (Clause : Access_Object) return Access_Object is
+      begin
+         return Car(Clause);
+      end;
+
+      function Is_Cond_Else_Clause (Clause : Access_Object) return Boolean is
+      begin
+         return Cond_Predicate(Clause) = Else_Symbol;
+      end;
+
+      function Cond_Actions (Clause : Access_Object) return Access_Object is
+      begin
+         return Cdr(Clause);
+      end;
+
+      function Sequence_To_Expr (Seq : Access_Object) return Access_Object is
+      begin
+         if Is_The_Empty_List(Seq) then
+            return Seq;
+         elsif Is_Last_Exp(Seq) then
+            return First_Exp(Seq);
+         else
+            return Make_Begin(Seq);
+         end if;
+      end;
+
+      function Expand_Clauses (Clauses : Access_Object) return Access_Object is
+      begin
+         if Is_The_Empty_List(Clauses) then
+            return False_Singleton; -- No else clause
+         else
+            declare
+               First : Access_Object := Car(Clauses);
+               Rest : Access_Object := Cdr(Clauses);
+            begin
+               if Is_Cond_Else_Clause(First) then
+                  if Is_The_Empty_List(Rest) then
+                     return Sequence_To_Expr(Rest);
+                  else
+                     Stderr("'else' is not the last clause in 'cond' expression.");
+                  end if;
+               else
+               end if;
+            end;
+      end;
+
    begin
       <<Tailcall>>
       if Exp.all.O_Type = Symbol and then Exp.all.Data.Symbol = "_" then
@@ -1490,11 +1564,23 @@ procedure Scheme is
          return Make_Compound_Proc(Lambda_Parameters(Exp),
                                    Lambda_Body(Exp),
                                    env);
+      elsif Is_Begin(Exp) then
+         Exp := Begin_Actions(Exp);
+         declare
+            Dummy : Access_Object := null;
+         begin
+            loop
+               exit when Is_Last_Exp(Exp);
+               Dummy := Eval(First_Exp(Exp), Env);
+               Exp := Rest_Exps(Exp);
+            end loop;
+         end;
+         Exp := First_Exp(Exp);
+         goto Tailcall;
       elsif Is_Application(Exp) then
          declare
             Proc : Access_Object := Eval(Operator(Exp), Env);
             Args : Access_Object := List_Of_Values(Operands(Exp), Env);
-            Dummy : Access_Object := null;
          begin
             if Is_Primitive_Proc(Proc) then
                return Proc.all.Data.Primitive.all(Args);
@@ -1502,13 +1588,7 @@ procedure Scheme is
                Env := Extend_Environment(Proc.all.Data.Compound_Proc.Parameters,
                                          Args,
                                          Proc.all.Data.Compound_Proc.Env);
-               Exp := Proc.all.Data.Compound_Proc.L_Body;
-               loop
-                  exit when Is_Last_Exp(Exp);
-                  Dummy := Eval(First_Exp(Exp), Env);
-                  Exp := Rest_Exps(Exp);
-               end loop;
-               Exp := First_Exp(Exp);
+               Exp := Make_Begin(Proc.all.Data.Compound_Proc.L_Body);
                goto Tailcall;
             else
                Stderr("Unknown procedure type");
