@@ -82,6 +82,7 @@ procedure Scheme is
    Else_Symbol : Access_Object;
    Let_Symbol : Access_Object;
    And_Symbol : Access_Object;
+   Or_Symbol : Access_Object;
    The_Empty_Environment : Access_Object;
    The_Global_Environment : Access_Object;
 
@@ -823,6 +824,7 @@ procedure Scheme is
       Else_Symbol := Make_Symbol(To_Unbounded_String("else"));
       Let_Symbol := Make_Symbol(To_Unbounded_String("let"));
       And_Symbol := Make_Symbol(To_Unbounded_String("and"));
+      Or_Symbol := Make_Symbol(To_Unbounded_String("or"));
 
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
@@ -1665,6 +1667,34 @@ procedure Scheme is
          return And_Predicates_To_Ifs(And_Predicates(Expr));
       end;
 
+      function Is_Or (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, Or_Symbol);
+      end;
+
+      function Or_Predicates (Expr : Access_Object) return Access_Object is
+      begin
+         return Cdr(Expr);
+      end;
+
+      function Or_Predicates_To_Ifs (Predicates : Access_Object) return Access_Object is
+         First : Access_Object := Car(Predicates);
+         Rest : Access_Object := Cdr(Predicates);
+      begin
+         if Is_The_Empty_List(Rest) then
+            return Make_If(First, True_Singleton, False_Singleton);
+         else
+            return Make_If(First,
+                           True_Singleton,
+                           Or_Predicates_To_Ifs(Rest));
+         end if;
+      end;
+
+      function Or_To_If (Expr : Access_Object) return Access_Object is
+      begin
+         return Or_Predicates_To_Ifs(Or_Predicates(Expr));
+      end;
+
    begin
       <<Tailcall>>
       if Exp.all.O_Type = Symbol and then Exp.all.Data.Symbol = "_" then
@@ -1687,6 +1717,9 @@ procedure Scheme is
          goto Tailcall;
       elsif Is_And(Exp) then
          Exp := And_To_If(Exp);
+         goto Tailcall;
+      elsif Is_Or(Exp) then
+         Exp := Or_To_If(Exp);
          goto Tailcall;
       elsif Is_Lambda(Exp) then
          return Make_Compound_Proc(Lambda_Parameters(Exp),
