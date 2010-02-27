@@ -1654,7 +1654,7 @@ procedure Scheme is
          Rest : Access_Object := Cdr(Predicates);
       begin
          if Is_The_Empty_List(Rest) then
-            return Make_If(First, True_Singleton, False_Singleton);
+            return First;
          else
             return Make_If(First,
                            And_Predicates_To_Ifs(Rest),
@@ -1682,10 +1682,13 @@ procedure Scheme is
          Rest : Access_Object := Cdr(Predicates);
       begin
          if Is_The_Empty_List(Rest) then
-            return Make_If(First, True_Singleton, False_Singleton);
+            return First;
          else
+            -- This is a pretty ugly implementation b/c any value that is truthy
+            --  will be evaluated twice (ulness it is last in the list and
+            --  everything else is false).
             return Make_If(First,
-                           True_Singleton,
+                           First,
                            Or_Predicates_To_Ifs(Rest));
          end if;
       end;
