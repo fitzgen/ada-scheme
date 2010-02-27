@@ -81,6 +81,7 @@ procedure Scheme is
    Cond_Symbol : Access_Object;
    Else_Symbol : Access_Object;
    Let_Symbol : Access_Object;
+   And_Symbol : Access_Object;
    The_Empty_Environment : Access_Object;
    The_Global_Environment : Access_Object;
 
@@ -821,6 +822,7 @@ procedure Scheme is
       Cond_Symbol := Make_Symbol(To_Unbounded_String("cond"));
       Else_Symbol := Make_Symbol(To_Unbounded_String("else"));
       Let_Symbol := Make_Symbol(To_Unbounded_String("let"));
+      And_Symbol := Make_Symbol(To_Unbounded_String("and"));
 
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
@@ -1526,17 +1528,18 @@ procedure Scheme is
          end if;
       end;
 
+      function Make_If (Predicate : Access_Object;
+                        Consequent : Access_Object;
+                        Alternative : Access_Object) return Access_Object is
+      begin
+         return Cons(If_Symbol,
+                     Cons(Predicate,
+                          Cons(Consequent,
+                               Cons(Alternative,
+                                    The_Empty_List))));
+      end;
+
       function Expand_Clauses (Clauses : Access_Object) return Access_Object is
-         function Make_If (Predicate : Access_Object;
-                           Consequent : Access_Object;
-                           Alternative : Access_Object) return Access_Object is
-         begin
-            return Cons(If_Symbol,
-                        Cons(Predicate,
-                             Cons(Consequent,
-                                  Cons(Alternative,
-                                       The_Empty_List))));
-         end;
       begin
          if Is_The_Empty_List(Clauses) then
             return False_Singleton; -- No else clause
@@ -1634,6 +1637,34 @@ procedure Scheme is
                                  Let_Arguments(Expr));
       end;
 
+      function Is_And (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, And_Symbol);
+      end;
+
+      function And_Predicates (Expr : Access_Object) return Access_Object is
+      begin
+         return Cdr(Expr);
+      end;
+
+      function And_Predicates_To_Ifs (Predicates : Access_Object) return Access_Object is
+         First : Access_Object := Car(Predicates);
+         Rest : Access_Object := Cdr(Predicates);
+      begin
+         if Is_The_Empty_List(Rest) then
+            return Make_If(First, True_Singleton, False_Singleton);
+         else
+            return Make_If(First,
+                           And_Predicates_To_Ifs(Rest),
+                           False_Singleton);
+         end if;
+      end;
+
+      function And_To_If (Expr : Access_Object) return Access_Object is
+      begin
+         return And_Predicates_To_Ifs(And_Predicates(Expr));
+      end;
+
    begin
       <<Tailcall>>
       if Exp.all.O_Type = Symbol and then Exp.all.Data.Symbol = "_" then
@@ -1653,6 +1684,9 @@ procedure Scheme is
          return Eval_If(Exp, Env);
       elsif Is_Cond(Exp) then
          Exp := Cond_To_If(Exp);
+         goto Tailcall;
+      elsif Is_And(Exp) then
+         Exp := And_To_If(Exp);
          goto Tailcall;
       elsif Is_Lambda(Exp) then
          return Make_Compound_Proc(Lambda_Parameters(Exp),
