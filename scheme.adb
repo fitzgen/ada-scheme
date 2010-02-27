@@ -384,6 +384,7 @@ procedure Scheme is
          end loop;
          This_Env := Enclosing_Environment(This_Env);
       end loop;
+      Stderr("Unbound variable '" & To_String(Var.all.Data.Symbol) & "'");
       raise Constraint_Error;
    end;
 
@@ -407,7 +408,7 @@ procedure Scheme is
          end loop;
          This_Env := Enclosing_Environment(This_Env);
       end loop;
-      Stderr("Unbound variable '" & To_String(Var.all.Data.Symbol) & "'");
+      Stderr("Unbound variable '" & To_String(Var.all.Data.Symbol) & "' must be defined before set.");
       raise Constraint_Error;
    end;
 
