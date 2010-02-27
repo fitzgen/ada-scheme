@@ -395,7 +395,7 @@ procedure Scheme is
       This_Env : Access_Object := Env;
    begin
       while This_Env /= The_Empty_List loop
-         Frame := First_Frame(Env);
+         Frame := First_Frame(This_Env);
          Vars := Frame_Variables(Frame);
          Vals := Frame_Values(Frame);
          while Vars /= The_Empty_List loop
