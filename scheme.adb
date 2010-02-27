@@ -798,6 +798,13 @@ procedure Scheme is
       return Make_Symbol(Car(Arguments).all.Data.Strng);
    end;
 
+   function Apply_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+--        Stderr("This should never be called because it is a hack.");
+--        raise Constraint_Error;
+      return False_Singleton;
+   end;
+
    procedure Init is
    begin
       The_Empty_List := Alloc_Object;
@@ -915,6 +922,9 @@ procedure Scheme is
                       The_Global_Environment);
       Define_Variable(Make_Symbol(To_Unbounded_String("string->symbol")),
                       Make_Primitive_Proc(String_To_Symbol_Proc'access),
+                      The_Global_Environment);
+      Define_Variable(Make_Symbol(To_Unbounded_String("apply")),
+                      Make_Primitive_Proc(Apply_Proc'access),
                       The_Global_Environment);
    end;
 
@@ -1698,6 +1708,11 @@ procedure Scheme is
          return Or_Predicates_To_Ifs(Or_Predicates(Expr));
       end;
 
+      function Is_Apply_Proc (Proc : Access_Object) return Boolean is
+      begin
+         return Proc.all.Data.Primitive = Apply_Proc'access;
+      end;
+
    begin
       <<Tailcall>>
       if Exp.all.O_Type = Symbol and then Exp.all.Data.Symbol = "_" then
@@ -1750,7 +1765,15 @@ procedure Scheme is
             Args : Access_Object := List_Of_Values(Operands(Exp), Env);
          begin
             if Is_Primitive_Proc(Proc) then
-               return Proc.all.Data.Primitive.all(Args);
+               if Is_Apply_Proc(Proc) then
+                  -- Hack to check for the apply procedure (which should never
+                  --  actually be called in this hacked up implementation) which
+                  --  if we find, we rewrite the AST.
+                  Exp := Make_Application(Cadadr(Exp), Car(Cdaddr(Exp)));
+                  goto Tailcall;
+               else
+                  return Proc.all.Data.Primitive.all(Args);
+               end if;
             elsif Is_Compound_Proc(Proc) then
                Env := Extend_Environment(Proc.all.Data.Compound_Proc.Parameters,
                                          Args,
