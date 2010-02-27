@@ -80,6 +80,7 @@ procedure Scheme is
    Begin_Symbol : Access_Object;
    Cond_Symbol : Access_Object;
    Else_Symbol : Access_Object;
+   Let_Symbol : Access_Object;
    The_Empty_Environment : Access_Object;
    The_Global_Environment : Access_Object;
 
@@ -819,6 +820,7 @@ procedure Scheme is
       Begin_Symbol := Make_Symbol(To_Unbounded_String("begin"));
       Cond_Symbol := Make_Symbol(To_Unbounded_String("cond"));
       Else_Symbol := Make_Symbol(To_Unbounded_String("else"));
+      Let_Symbol := Make_Symbol(To_Unbounded_String("let"));
 
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
@@ -1564,6 +1566,74 @@ procedure Scheme is
          return Expand_Clauses(Cond_Clauses(Expr));
       end;
 
+      function Is_Let (Expr : Access_Object) return Boolean is
+      begin
+         return Is_Tagged_List(Expr, Let_Symbol);
+      end;
+
+      function Let_Bindings (Expr : Access_Object) return Access_Object is
+      begin
+         return Cadr(Expr);
+      end;
+
+      function Let_Body (Expr : Access_Object) return Access_Object is
+      begin
+         return Cddr(Expr);
+      end;
+
+      function Binding_Param (Binding : Access_Object) return Access_Object is
+      begin
+         return Car(Binding);
+      end;
+
+      function Binding_Arg (Binding : Access_Object) return Access_Object is
+      begin
+         return Cadr(Binding);
+      end;
+
+      function Binding_Params (Bindings : Access_Object) return Access_Object is
+      begin
+         if Is_The_Empty_List(Bindings) then
+            return The_Empty_List;
+         else
+            return Cons(Binding_Param(Car(Bindings)),
+                        Binding_Params(Cdr(Bindings)));
+         end if;
+      end;
+
+      function Binding_Args (Bindings : Access_Object) return Access_Object is
+      begin
+         if Is_The_Empty_List(Bindings) then
+            return The_Empty_List;
+         else
+            return Cons(Binding_Arg(Car(Bindings)),
+                        Binding_Args(Cdr(Bindings)));
+         end if;
+      end;
+
+      function Let_Parameters (Expr : Access_Object) return Access_Object is
+      begin
+         return Binding_Params(Let_Bindings(Expr));
+      end;
+
+      function Let_Arguments (Expr : Access_Object) return Access_Object is
+      begin
+         return Binding_Args(Let_Bindings(Expr));
+      end;
+
+      function Make_Application (Operator : Access_Object;
+                                 Operands : Access_Object) return Access_Object is
+      begin
+         return Cons(Operator, Operands);
+      end;
+
+      function Let_To_Application (Expr : Access_Object) return Access_Object is
+      begin
+         return Make_Application(Make_Lambda(Let_Parameters(Expr),
+                                             Let_Body(Expr)),
+                                 Let_Arguments(Expr));
+      end;
+
    begin
       <<Tailcall>>
       if Exp.all.O_Type = Symbol and then Exp.all.Data.Symbol = "_" then
@@ -1588,6 +1658,9 @@ procedure Scheme is
          return Make_Compound_Proc(Lambda_Parameters(Exp),
                                    Lambda_Body(Exp),
                                    env);
+      elsif Is_Let(Exp) then
+         Exp := Let_To_Application(Exp);
+         goto Tailcall;
       elsif Is_Begin(Exp) then
          Exp := Begin_Actions(Exp);
          declare
