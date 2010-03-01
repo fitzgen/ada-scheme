@@ -431,6 +431,11 @@ procedure Scheme is
       Add_Binding_To_Frame(Var, Val, Frame);
    end;
 
+   function Interaction_Environment_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      return The_Global_Environment;
+   end;
+
    function Setup_Environment return Access_Object is
       Initial_Env : Access_Object;
    begin
@@ -438,6 +443,24 @@ procedure Scheme is
                                         The_Empty_List,
                                         The_Empty_Environment);
       return Initial_Env;
+   end;
+
+   function Null_Environment_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      return Setup_Environment;
+   end;
+
+   function Populate_Environment (Env : Access_Object) return Access_Object;
+
+   function Make_Environment return Access_Object is
+      Env : Access_Object := Populate_Environment(Setup_Environment);
+   begin
+      return Env;
+   end;
+
+   function Environment_Proc (Args : Access_Object) return Access_Object is
+   begin
+      return Make_Environment;
    end;
 
    function Make_Symbol (Value : Unbounded_String) return Access_Object is
@@ -801,20 +824,19 @@ procedure Scheme is
 
    function Apply_Proc (Arguments : Access_Object) return Access_Object is
    begin
---        Stderr("This should never be called because it is a hack.");
---        raise Constraint_Error;
+      Stderr("This should never be called because it is a hack.");
+      raise Constraint_Error;
+      return False_Singleton;
+   end;
+
+   function Eval_Proc (Arguments : Access_Object) return Access_Object is
+   begin
+      Stderr("This should never be called because it is a hack.");
+      raise Constraint_Error;
       return False_Singleton;
    end;
 
    procedure Init is
-      procedure Def_Primitive_Proc (Symbol : in String;
-                                    Proc : in Access_Function) is
-      begin
-         Define_Variable(Make_Symbol(To_Unbounded_String(Symbol)),
-                         Make_Primitive_Proc(Proc),
-                         The_Global_Environment);
-
-      end;
    begin
       The_Empty_List := Alloc_Object;
       The_Empty_List.all.O_Type := Empty_List;
@@ -843,38 +865,56 @@ procedure Scheme is
       Or_Symbol := Make_Symbol(To_Unbounded_String("or"));
 
       The_Empty_Environment := The_Empty_List;
-      The_Global_Environment := Setup_Environment;
+      The_Global_Environment := Make_Environment;
+   end;
 
-      Def_Primitive_Proc("+", Add_Proc'access);
-      Def_Primitive_Proc("-", Sub_Proc'access);
-      Def_Primitive_Proc("*", Multiply_Proc'access);
-      Def_Primitive_Proc("quotient", Quotient_Proc'access);
-      Def_Primitive_Proc("remainder", Remainder_Proc'access);
-      Def_Primitive_Proc("=", Equal_Proc'access);
-      Def_Primitive_Proc("<", Lt_Proc'access);
-      Def_Primitive_Proc(">", Gt_Proc'access);
-      Def_Primitive_Proc("null?", Is_Null_Proc'access);
-      Def_Primitive_Proc("cons", Cons_Proc'access);
-      Def_Primitive_Proc("car", Car_Proc'access);
-      Def_Primitive_Proc("cdr", Cdr_Proc'access);
-      Def_Primitive_Proc("set-car!", Set_Car_Proc'access);
-      Def_Primitive_Proc("set-cdr!", Set_Cdr_Proc'access);
-      Def_Primitive_Proc("list", List_Proc'access);
-      Def_Primitive_Proc("boolean?", Is_Boolean_Proc'access);
-      Def_Primitive_Proc("symbol?", Is_Symbol_Proc'access);
-      Def_Primitive_Proc("integer?", Is_Integer_Proc'access);
-      Def_Primitive_Proc("char?", Is_Char_Proc'access);
-      Def_Primitive_Proc("string?", Is_String_Proc'access);
-      Def_Primitive_Proc("pair?", Is_Pair_Proc'access);
-      Def_Primitive_Proc("procedure?", Is_Procedure_Proc'access);
-      Def_Primitive_Proc("eq?", Eq_Proc'access);
-      Def_Primitive_Proc("char->integer", Char_To_Int_Proc'access);
-      Def_Primitive_Proc("integer->char", Int_To_Char_Proc'access);
-      Def_Primitive_Proc("number->string", Number_To_String_Proc'access);
-      Def_Primitive_Proc("string->number", String_To_Number_Proc'access);
-      Def_Primitive_Proc("symbol->string", Symbol_To_String_Proc'access);
-      Def_Primitive_Proc("string->symbol", String_To_Symbol_Proc'access);
-      Def_Primitive_Proc("apply", Apply_Proc'access);
+   function Populate_Environment (Env : Access_Object) return Access_Object is
+      procedure Def_Primitive_Proc (Symbol : in String;
+                                    Proc : in Access_Function;
+                                    Env : in Access_Object) is
+      begin
+         Define_Variable(Make_Symbol(To_Unbounded_String(Symbol)),
+                         Make_Primitive_Proc(Proc),
+                         Env);
+
+      end;
+   begin
+      Def_Primitive_Proc("+", Add_Proc'Access, Env);
+      Def_Primitive_Proc("-", Sub_Proc'Access, Env);
+      Def_Primitive_Proc("*", Multiply_Proc'Access, Env);
+      Def_Primitive_Proc("quotient", Quotient_Proc'Access, Env);
+      Def_Primitive_Proc("remainder", Remainder_Proc'Access, Env);
+      Def_Primitive_Proc("=", Equal_Proc'Access, Env);
+      Def_Primitive_Proc("<", Lt_Proc'Access, Env);
+      Def_Primitive_Proc(">", Gt_Proc'Access, Env);
+      Def_Primitive_Proc("null?", Is_Null_Proc'Access, Env);
+      Def_Primitive_Proc("cons", Cons_Proc'Access, Env);
+      Def_Primitive_Proc("car", Car_Proc'Access, Env);
+      Def_Primitive_Proc("cdr", Cdr_Proc'Access, Env);
+      Def_Primitive_Proc("set-car!", Set_Car_Proc'Access, Env);
+      Def_Primitive_Proc("set-cdr!", Set_Cdr_Proc'Access, Env);
+      Def_Primitive_Proc("list", List_Proc'Access, Env);
+      Def_Primitive_Proc("boolean?", Is_Boolean_Proc'Access, Env);
+      Def_Primitive_Proc("symbol?", Is_Symbol_Proc'Access, Env);
+      Def_Primitive_Proc("integer?", Is_Integer_Proc'Access, Env);
+      Def_Primitive_Proc("char?", Is_Char_Proc'Access, Env);
+      Def_Primitive_Proc("string?", Is_String_Proc'Access, Env);
+      Def_Primitive_Proc("pair?", Is_Pair_Proc'Access, Env);
+      Def_Primitive_Proc("procedure?", Is_Procedure_Proc'Access, Env);
+      Def_Primitive_Proc("eq?", Eq_Proc'Access, Env);
+      Def_Primitive_Proc("char->integer", Char_To_Int_Proc'Access, Env);
+      Def_Primitive_Proc("integer->char", Int_To_Char_Proc'Access, Env);
+      Def_Primitive_Proc("number->string", Number_To_String_Proc'Access, Env);
+      Def_Primitive_Proc("string->number", String_To_Number_Proc'Access, Env);
+      Def_Primitive_Proc("symbol->string", Symbol_To_String_Proc'Access, Env);
+      Def_Primitive_Proc("string->symbol", String_To_Symbol_Proc'Access, Env);
+      Def_Primitive_Proc("apply", Apply_Proc'Access, Env);
+      Def_Primitive_Proc("interaction-environment", Interaction_Environment_Proc'Access, Env);
+      Def_Primitive_Proc("null-environment", Null_Environment_Proc'Access, Env);
+      Def_Primitive_Proc("environment", Environment_Proc'Access, Env);
+      Def_Primitive_Proc("eval", Eval_Proc'Access, Env);
+
+      return Env;
    end;
 
    -- READ ----------------------------------------------------------------
@@ -1659,15 +1699,27 @@ procedure Scheme is
 
       function Is_Apply_Proc (Proc : Access_Object) return Boolean is
       begin
-         return Proc.all.Data.Primitive = Apply_Proc'access;
+         return Proc.all.Data.Primitive = Apply_Proc'Access;
+      end;
+
+      function Is_Eval_Proc (Proc : Access_Object) return Boolean is
+      begin
+         return Proc.all.Data.Primitive = Eval_Proc'Access;
+      end;
+
+      function Eval_Expression (Args : Access_Object) return Access_Object is
+      begin
+         return Car(Args);
+      end;
+
+      function Eval_Environment (Args : Access_Object) return Access_Object is
+      begin
+         return Cadr(Args);
       end;
 
    begin
       <<Tailcall>>
-      if Exp.all.O_Type = Symbol and then Exp.all.Data.Symbol = "_" then
-          -- Shortcut for inspecting the env.
-          return Env;
-      elsif Is_Self_Evaluating(Exp) then
+      if Is_Self_Evaluating(Exp) then
           return Exp;
       elsif Is_Variable(Exp) then
          return Lookup_Variable_Value(Exp, Env);
@@ -1719,6 +1771,10 @@ procedure Scheme is
                   --  actually be called in this hacked up implementation) which
                   --  if we find, we rewrite the AST.
                   Exp := Make_Application(Cadadr(Exp), Car(Cdaddr(Exp)));
+                  goto Tailcall;
+               elsif Is_Eval_Proc(Proc) then
+                  Exp := Eval_Expression(Args);
+                  Env := Eval_Environment(Args);
                   goto Tailcall;
                else
                   return Proc.all.Data.Primitive.all(Args);
