@@ -807,6 +807,14 @@ procedure Scheme is
    end;
 
    procedure Init is
+      procedure Def_Primitive_Proc (Symbol : in String;
+                                    Proc : in Access_Function) is
+      begin
+         Define_Variable(Make_Symbol(To_Unbounded_String(Symbol)),
+                         Make_Primitive_Proc(Proc),
+                         The_Global_Environment);
+
+      end;
    begin
       The_Empty_List := Alloc_Object;
       The_Empty_List.all.O_Type := Empty_List;
@@ -837,96 +845,36 @@ procedure Scheme is
       The_Empty_Environment := The_Empty_List;
       The_Global_Environment := Setup_Environment;
 
-      Define_Variable(Make_Symbol(To_Unbounded_String("+")),
-                      Make_Primitive_Proc(Add_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("-")),
-                      Make_Primitive_Proc(Sub_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("*")),
-                      Make_Primitive_Proc(Multiply_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("quotient")),
-                      Make_Primitive_Proc(Quotient_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("remainder")),
-                      Make_Primitive_Proc(Remainder_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("=")),
-                      Make_Primitive_Proc(Equal_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("<")),
-                      Make_Primitive_Proc(Lt_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String(">")),
-                      Make_Primitive_Proc(Gt_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("null?")),
-                      Make_Primitive_Proc(Is_Null_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("cons")),
-                      Make_Primitive_Proc(Cons_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("car")),
-                      Make_Primitive_Proc(Car_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("cdr")),
-                      Make_Primitive_Proc(Cdr_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("set-car!")),
-                      Make_Primitive_Proc(Set_Car_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("set-cdr!")),
-                      Make_Primitive_Proc(Set_Cdr_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("list")),
-                      Make_Primitive_Proc(List_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("boolean?")),
-                      Make_Primitive_Proc(Is_Boolean_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("symbol?")),
-                      Make_Primitive_Proc(Is_Symbol_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("integer?")),
-                      Make_Primitive_Proc(Is_Integer_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("char?")),
-                      Make_Primitive_Proc(Is_Char_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("string?")),
-                      Make_Primitive_Proc(Is_String_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("pair?")),
-                      Make_Primitive_Proc(Is_Pair_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("procedure?")),
-                      Make_Primitive_Proc(Is_Procedure_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("eq?")),
-                      Make_Primitive_Proc(Eq_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("char->integer")),
-                      Make_Primitive_Proc(Char_To_Int_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("integer->char")),
-                      Make_Primitive_Proc(Int_To_Char_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("number->string")),
-                      Make_Primitive_Proc(Number_To_String_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("string->number")),
-                      Make_Primitive_Proc(String_To_Number_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("symbol->string")),
-                      Make_Primitive_Proc(Symbol_To_String_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("string->symbol")),
-                      Make_Primitive_Proc(String_To_Symbol_Proc'access),
-                      The_Global_Environment);
-      Define_Variable(Make_Symbol(To_Unbounded_String("apply")),
-                      Make_Primitive_Proc(Apply_Proc'access),
-                      The_Global_Environment);
+      Def_Primitive_Proc("+", Add_Proc'access);
+      Def_Primitive_Proc("-", Sub_Proc'access);
+      Def_Primitive_Proc("*", Multiply_Proc'access);
+      Def_Primitive_Proc("quotient", Quotient_Proc'access);
+      Def_Primitive_Proc("remainder", Remainder_Proc'access);
+      Def_Primitive_Proc("=", Equal_Proc'access);
+      Def_Primitive_Proc("<", Lt_Proc'access);
+      Def_Primitive_Proc(">", Gt_Proc'access);
+      Def_Primitive_Proc("null?", Is_Null_Proc'access);
+      Def_Primitive_Proc("cons", Cons_Proc'access);
+      Def_Primitive_Proc("car", Car_Proc'access);
+      Def_Primitive_Proc("cdr", Cdr_Proc'access);
+      Def_Primitive_Proc("set-car!", Set_Car_Proc'access);
+      Def_Primitive_Proc("set-cdr!", Set_Cdr_Proc'access);
+      Def_Primitive_Proc("list", List_Proc'access);
+      Def_Primitive_Proc("boolean?", Is_Boolean_Proc'access);
+      Def_Primitive_Proc("symbol?", Is_Symbol_Proc'access);
+      Def_Primitive_Proc("integer?", Is_Integer_Proc'access);
+      Def_Primitive_Proc("char?", Is_Char_Proc'access);
+      Def_Primitive_Proc("string?", Is_String_Proc'access);
+      Def_Primitive_Proc("pair?", Is_Pair_Proc'access);
+      Def_Primitive_Proc("procedure?", Is_Procedure_Proc'access);
+      Def_Primitive_Proc("eq?", Eq_Proc'access);
+      Def_Primitive_Proc("char->integer", Char_To_Int_Proc'access);
+      Def_Primitive_Proc("integer->char", Int_To_Char_Proc'access);
+      Def_Primitive_Proc("number->string", Number_To_String_Proc'access);
+      Def_Primitive_Proc("string->number", String_To_Number_Proc'access);
+      Def_Primitive_Proc("symbol->string", Symbol_To_String_Proc'access);
+      Def_Primitive_Proc("string->symbol", String_To_Symbol_Proc'access);
+      Def_Primitive_Proc("apply", Apply_Proc'access);
    end;
 
    -- READ ----------------------------------------------------------------
